@@ -11,18 +11,20 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 
 /**
  * Created by subbota on 22.03.2016.
  */
 public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.ViewHolder> {
     static class ViewHolder extends RecyclerView.ViewHolder{
-        CheckedTextView mView;
         public ViewHolder(CheckedTextView itemView) {
             super(itemView);
-            mView = itemView;
         }
+        public CheckedTextView getTextView(){ return (CheckedTextView)itemView; }
     }
     ArrayList<NoteDescription> mDataSource;
     @Override
@@ -32,22 +34,40 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
         return new ViewHolder(view);
     }
 
-    @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
-        holder.mView.setText(mDataSource.get(position).toString());
+    NoteDescription getItem(int position)
+    {
+        return mDataSource.get(position);
     }
 
+    @Override
+    public void onBindViewHolder(ViewHolder holder, int position) {
+        NoteDescription item = mDataSource.get(position);
+        if (item.mPreviewText != null)
+            holder.getTextView().setText(item.mPreviewText);
+    }
+
+    public static File getDirectory()
+    {
+        return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), NotesListActivity.NotesDirectory);
+    }
     public void updateAsync(){
         new AsyncTask<Void, Void, ArrayList<NoteDescription>>() {
             @Override
             protected ArrayList<NoteDescription> doInBackground(Void... params) {
-                File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), NotesListActivity.NotesDirectory);
+                File file = getDirectory();
                 file.mkdirs();
                 File[] fileNames = file.listFiles();
+                Arrays.sort(fileNames, new Comparator<File>() {
+                    // make recent first
+                    @Override
+                    public int compare(File lhs, File rhs) {
+                        return (int)(rhs.lastModified()-lhs.lastModified());
+                    }
+                });
                 ArrayList<NoteDescription> ret = new ArrayList<NoteDescription>(fileNames.length);
                 for(final File f: fileNames) {
                     NoteDescription item = new NoteDescription();
-                    item.mFileName = f.toURI();
+                    item.mFileName = f;
                     ret.add(item);
                 }
                 return ret;
@@ -70,11 +90,12 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                 for(int i=0; i<mDataSource.size(); ++i){
                     NoteDescription item = mDataSource.get(i);
                     try {
-                        BufferedReader reader = new BufferedReader(new FileReader(item.mFileName.getPath()));
+                        BufferedReader reader = new BufferedReader(new FileReader(item.mFileName));
                         item.mPreviewText = reader.readLine();
-                        publishProgress(i);
                     }catch(IOException e) {
+                        item.mPreviewText = e.getMessage();
                     }
+                    publishProgress(i);
                 }
                 return null;
             }

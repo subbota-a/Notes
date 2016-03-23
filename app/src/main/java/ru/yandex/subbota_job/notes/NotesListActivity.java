@@ -1,12 +1,16 @@
 package ru.yandex.subbota_job.notes;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.view.MotionEventCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,7 +18,8 @@ import android.widget.ArrayAdapter;
 
 import java.io.File;
 
-public class NotesListActivity extends AppCompatActivity {
+public class NotesListActivity extends AppCompatActivity
+{
 
     NotesListAdapter mNodes = new NotesListAdapter();
     RecyclerView mList;
@@ -34,15 +39,32 @@ public class NotesListActivity extends AppCompatActivity {
                 createNewNote();
             }
         });
+
+        mNodes.updateAsync();
+
         mList = (RecyclerView)findViewById(R.id.listview);
         assert mList != null;
         mList.setLayoutManager(new LinearLayoutManager(this));
         mList.setAdapter(mNodes);
-        mNodes.updateAsync();
+        new RecyclerViewGestureDetector(this, mList).setOnItemClickListener(
+                new RecyclerViewGestureDetector.OnItemClickListener() {
+                    @Override
+                    public void OnClick(RecyclerView view, int index) {
+                        editNote(mNodes.getItem(index));
+                    }
+                }
+        );
+    }
+
+    private void editNote(NoteDescription item) {
+        Intent intent = new Intent(this, NoteContentActivity.class);
+        intent.setData(Uri.fromFile(item.mFileName));
+        startActivity(intent);
     }
 
     private void createNewNote() {
-
+        Intent intent = new Intent(this, NoteContentActivity.class);
+        startActivity(intent);
     }
 
     @Override
@@ -60,10 +82,11 @@ public class NotesListActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
+//        if (id == R.id.action_settings) {
+//            return true;
+//        }
 
         return super.onOptionsItemSelected(item);
     }
+
 }
