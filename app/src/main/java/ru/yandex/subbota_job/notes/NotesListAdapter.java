@@ -1,11 +1,16 @@
 package ru.yandex.subbota_job.notes;
 
+import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckedTextView;
+import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,23 +20,36 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.jar.Manifest;
 
 /**
  * Created by subbota on 22.03.2016.
  */
 public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.ViewHolder> {
+    private final Context mContext;
+
     static class ViewHolder extends RecyclerView.ViewHolder{
-        public ViewHolder(CheckedTextView itemView) {
+        public static ViewHolder create(ViewGroup parent)
+        {
+            return new ViewHolder(
+                    LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.notes_item, parent, false));
+        }
+        public ViewHolder(View itemView) {
             super(itemView);
         }
-        public CheckedTextView getTextView(){ return (CheckedTextView)itemView; }
+        public void setText(String text){
+            ((TextView)itemView).setText(text);
+        }
     }
-    ArrayList<NoteDescription> mDataSource;
+    private ArrayList<NoteDescription> mDataSource;
+    public NotesListAdapter(Context context)
+    {
+        mContext = context;
+    }
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        CheckedTextView view = (CheckedTextView)LayoutInflater.from(parent.getContext())
-                .inflate(android.R.layout.simple_list_item_multiple_choice, parent, false);
-        return new ViewHolder(view);
+        return ViewHolder.create(parent);
     }
 
     NoteDescription getItem(int position)
@@ -43,19 +61,30 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
     public void onBindViewHolder(ViewHolder holder, int position) {
         NoteDescription item = mDataSource.get(position);
         if (item.mPreviewText != null)
-            holder.getTextView().setText(item.mPreviewText);
+            holder.setText(item.mPreviewText);
     }
-
-    public static File getDirectory()
+    public static File getDirectory(Context context)
     {
-        return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), NotesListActivity.NotesDirectory);
+//        if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(context, "android.permission.WRITE_EXTERNAL_STORAGE")){
+//            return null;
+//        }
+//        String state = Environment.getExternalStorageState();
+//        if (state.equals(Environment.MEDIA_MOUNTED)){
+//            //File dir = new File(Environment.getExternalStoragePublicDirectory("Documents"), NotesListActivity.NotesDirectory);
+//            File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), NotesListActivity.NotesDirectory);
+//            if (!dir.isDirectory())
+//                dir.mkdirs();
+//            if (dir.isDirectory())
+//                return dir;
+//        }
+//        // Ничего не получается...
+        return context.getFilesDir();
     }
     public void updateAsync(){
         new AsyncTask<Void, Void, ArrayList<NoteDescription>>() {
             @Override
             protected ArrayList<NoteDescription> doInBackground(Void... params) {
-                File file = getDirectory();
-                file.mkdirs();
+                File file = getDirectory(mContext);
                 File[] fileNames = file.listFiles();
                 Arrays.sort(fileNames, new Comparator<File>() {
                     // make recent first

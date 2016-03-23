@@ -70,7 +70,7 @@ public class NoteContentActivity extends AppCompatActivity {
     }
 
     private String NewPath() {
-        File dir = NotesListAdapter.getDirectory();
+        File dir = NotesListAdapter.getDirectory(this);
         Date now = new Date();
         File file = new File(dir, String.valueOf(System.currentTimeMillis()) );
         return file.getPath();
