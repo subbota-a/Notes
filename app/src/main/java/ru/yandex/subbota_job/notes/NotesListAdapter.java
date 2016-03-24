@@ -20,6 +20,8 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.jar.Manifest;
 
 /**
@@ -27,6 +29,7 @@ import java.util.jar.Manifest;
  */
 public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.ViewHolder> {
     private final Context mContext;
+    private Set<Integer> mSelected;
 
     static class ViewHolder extends RecyclerView.ViewHolder{
         public static ViewHolder create(ViewGroup parent)
@@ -41,11 +44,13 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
         public void setText(String text){
             ((TextView)itemView).setText(text);
         }
+        public void setSelected(boolean selected){ itemView.setSelected(selected);}
     }
     private ArrayList<NoteDescription> mDataSource;
     public NotesListAdapter(Context context)
     {
         mContext = context;
+        mSelected = new HashSet<Integer>();
     }
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -62,7 +67,26 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
         NoteDescription item = mDataSource.get(position);
         if (item.mPreviewText != null)
             holder.setText(item.mPreviewText);
+        holder.setSelected(mSelected.contains(position));
     }
+    public boolean toggleSelection(int position)
+    {
+        boolean isSelected = mSelected.add(position);
+        if (!isSelected)
+            mSelected.remove(position);
+        notifyItemChanged(position);
+        return isSelected;
+    }
+    public int getSelectionCount()
+    {
+        return mSelected.size();
+    }
+    public void clearAllSelection()
+    {
+        mSelected.clear();
+        notifyDataSetChanged();
+    }
+
     public static File getDirectory(Context context)
     {
 //        if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(context, "android.permission.WRITE_EXTERNAL_STORAGE")){

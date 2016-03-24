@@ -8,6 +8,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,16 +44,35 @@ public class NotesListActivity extends AppCompatActivity
         assert mList != null;
         mList.setLayoutManager(new LinearLayoutManager(this));
         mList.setAdapter(mNotesAdaptor);
-        new RecyclerViewGestureDetector(this, mList).setOnItemClickListener(
-                new RecyclerViewGestureDetector.OnItemClickListener() {
-                    @Override
-                    public void OnClick(RecyclerView view, int index) {
-                        editNote(mNotesAdaptor.getItem(index));
-                    }
-                }
-        );
+
+        new RecyclerViewGestureDetector(this, mList, new GestureController());
     }
 
+    class GestureController extends GestureDetector.SimpleOnGestureListener{
+        int getAdapterPosition(MotionEvent e)
+        {
+            View itemView = mList.findChildViewUnder(e.getX(), e.getY());
+            if (itemView == null)
+                return RecyclerView.NO_POSITION;
+            return mList.getChildAdapterPosition(itemView);
+        }
+        @Override
+        public boolean onSingleTapUp(MotionEvent e) {
+            int position = getAdapterPosition(e);
+            if (position == RecyclerView.NO_POSITION)
+                return false;
+            editNote(mNotesAdaptor.getItem(position));
+            return true;
+        }
+
+        @Override
+        public void onLongPress(MotionEvent e) {
+            int position = getAdapterPosition(e);
+            if (position == RecyclerView.NO_POSITION)
+                return;
+            mNotesAdaptor.toggleSelection(position);
+        }
+    }
     private void editNote(NoteDescription item) {
         Intent intent = new Intent(this, NoteContentActivity.class);
         intent.setData(Uri.fromFile(item.mFileName));

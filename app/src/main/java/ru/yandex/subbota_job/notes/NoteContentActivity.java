@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -58,14 +59,15 @@ public class NoteContentActivity extends AppCompatActivity {
             }
         });
         if (savedInstanceState != null){
-            LoadContentAsync(savedInstanceState.getString(pathKey));
+            String path = savedInstanceState.getString(pathKey);
+            if (!TextUtils.isEmpty(path))
+                LoadContentAsync(path);
         }else {
             Intent intent = getIntent();
             assert intent != null;
             Uri uri = intent.getData();
-            if (uri != null) {
+            if (uri != null)
                 LoadContentAsync(uri.getPath());
-            }
         }
     }
 
@@ -79,7 +81,8 @@ public class NoteContentActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putString(pathKey, mPath);
+        if (mPath != null && !mPath.isEmpty())
+            outState.putString(pathKey, mPath);
     }
 
     @Override
@@ -102,13 +105,13 @@ public class NoteContentActivity extends AppCompatActivity {
 
     private void saveContentAsync() {
         Editable editable = mEdit.getText();
-        if (editable.length() == 0)
+        if (editable.length() == 0 && TextUtils.isEmpty(mPath))
             return;
         new AsyncTask<String, Void, Exception>() {
             @Override
             protected Exception doInBackground(String... params) {
                 try {
-                    String path = (mPath == null || mPath.isEmpty()) ? NewPath() : mPath;
+                    String path = TextUtils.isEmpty(mPath) ? NewPath() : mPath;
                     FileWriter writer = new FileWriter(path);
                     try {
                         writer.write(params[0]);

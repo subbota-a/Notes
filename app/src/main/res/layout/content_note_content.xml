@@ -9,7 +9,7 @@
     tools:showIn="@layout/activity_note_content"
     >
 
-    <android.support.design.widget.TextInputEditText
+    <EditText
         android:id="@+id/editor"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
