@@ -1,16 +1,22 @@
 package ru.yandex.subbota_job.notes;
 
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.widget.NestedScrollView;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -26,8 +32,12 @@ import java.util.Date;
 public class NoteContentActivity extends AppCompatActivity {
     String mPath;
     EditText mEdit;
-    boolean mChanged;
-    static final String pathKey = NoteContentActivity.class.getName() + "path";
+    boolean mChanged = false;
+    float mScale = 1;
+    float mDefaultTextSize;
+    ScaleGestureDetector mGesture;
+    static final String keyPath = NoteContentActivity.class.getName() + "path";
+    static final String keyScale = "scale";
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -42,6 +52,20 @@ public class NoteContentActivity extends AppCompatActivity {
                 NoteContentActivity.this.finish();
             }
         });
+        initEdit();
+
+        if (savedInstanceState != null){
+            mPath = savedInstanceState.getString(keyPath);
+        }else {
+            Intent intent = getIntent();
+            assert intent != null;
+            Uri uri = intent.getData();
+            if (uri != null)
+                LoadContentAsync(uri.getPath());
+        }
+    }
+
+    private void initEdit() {
         mEdit = (EditText)findViewById(R.id.editor);
         assert mEdit != null;
         mEdit.addTextChangedListener(new TextWatcher() {
@@ -58,19 +82,39 @@ public class NoteContentActivity extends AppCompatActivity {
                 mChanged = true;
             }
         });
-        if (savedInstanceState != null){
-            String path = savedInstanceState.getString(pathKey);
-            if (!TextUtils.isEmpty(path))
-                LoadContentAsync(path);
-        }else {
-            Intent intent = getIntent();
-            assert intent != null;
-            Uri uri = intent.getData();
-            if (uri != null)
-                LoadContentAsync(uri.getPath());
-        }
+        mScale = getPreferences(Context.MODE_PRIVATE).getFloat(keyScale, 1);
+        mDefaultTextSize = mEdit.getTextSize();
+        setScale();
+        mGesture = new ScaleGestureDetector(this, new ScaleGestureDetector.OnScaleGestureListener() {
+            @Override
+            public boolean onScale(ScaleGestureDetector detector) {
+                float nextScale = detector.getScaleFactor();
+                mScale *= nextScale;
+                setScale();
+                return true;
+            }
+
+            @Override
+            public boolean onScaleBegin(ScaleGestureDetector detector) {
+                return true;
+            }
+
+            @Override
+            public void onScaleEnd(ScaleGestureDetector detector) {
+            }
+        });
     }
 
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        mGesture.onTouchEvent(ev);
+        return mGesture.isInProgress() || super.dispatchTouchEvent(ev);
+    }
+
+    private void setScale()
+    {
+        mEdit.setTextSize(TypedValue.COMPLEX_UNIT_PX, mDefaultTextSize * mScale);
+    }
     private String NewPath() {
         File dir = NotesListAdapter.getDirectory(this);
         Date now = new Date();
@@ -82,12 +126,13 @@ public class NoteContentActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         if (mPath != null && !mPath.isEmpty())
-            outState.putString(pathKey, mPath);
+            outState.putString(keyPath, mPath);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        getPreferences(Context.MODE_PRIVATE).edit().putFloat(keyScale, mScale).commit();
         if (mChanged)
             saveContentAsync();
     }

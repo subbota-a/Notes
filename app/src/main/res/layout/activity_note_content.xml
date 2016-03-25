@@ -20,10 +20,28 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
             app:popupTheme="@style/AppTheme.PopupOverlay"
-            app:layout_scrollFlags="scroll|enterAlways"
-            />
+            app:layout_scrollFlags="scroll|enterAlways"/>
     </android.support.design.widget.AppBarLayout>
 
-    <include layout="@layout/content_note_content" />
+
+    <android.support.v4.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        tools:context="ru.yandex.subbota_job.notes.NoteContentActivity"
+        tools:showIn="@layout/activity_note_content"
+        android:id="@+id/nestedscrollview"
+        >
+
+        <EditText
+            android:id="@+id/editor"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="@dimen/text_margin"
+            style="@style/Widget.AppCompat.EditText" />
+
+    </android.support.v4.widget.NestedScrollView>
 
 </android.support.design.widget.CoordinatorLayout>

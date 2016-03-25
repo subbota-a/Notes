@@ -28,10 +28,13 @@
             android:name=".NoteContentActivity"
             android:label="@string/title_activity_note_content"
             android:parentActivityName=".NotesListActivity"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:windowSoftInputMode="adjustResize|stateVisible"
+            >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="ru.yandex.subbota_job.notes.NotesListActivity" />
+                android:value="ru.yandex.subbota_job.notes.NotesListActivity"/>
+
         </activity>
     </application>
 
