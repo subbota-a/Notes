@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="ru.yandex.subbota_job.notes.NoteContentActivity">
     <item
-        android:id="@+id/share"
+        android:id="@+id/share_action"
         android:orderInCategory="100"
         android:title="@string/share"
         android:icon="@drawable/ic_share_24dp"

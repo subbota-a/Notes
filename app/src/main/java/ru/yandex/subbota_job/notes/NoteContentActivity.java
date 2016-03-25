@@ -151,6 +151,12 @@ public class NoteContentActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.share_action){
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType(getResources().getString(R.string.noteMimeType));
+            intent.putExtra(Intent.EXTRA_TEXT, mEdit.getText().toString());
+            startActivity(intent);
+        }
         return super.onOptionsItemSelected(item);
     }
 
