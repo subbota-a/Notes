@@ -5,28 +5,28 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v4.widget.NestedScrollView;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.Date;
 
 public class NoteContentActivity extends AppCompatActivity {
@@ -62,6 +62,8 @@ public class NoteContentActivity extends AppCompatActivity {
             Uri uri = intent.getData();
             if (uri != null)
                 LoadContentAsync(uri.getPath());
+            else// force show keyboard only for new note
+                getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
         }
     }
 
@@ -84,13 +86,12 @@ public class NoteContentActivity extends AppCompatActivity {
         });
         mScale = getPreferences(Context.MODE_PRIVATE).getFloat(keyScale, 1);
         mDefaultTextSize = mEdit.getTextSize();
-        setScale();
+        zoomText(mScale);
         mGesture = new ScaleGestureDetector(this, new ScaleGestureDetector.OnScaleGestureListener() {
             @Override
             public boolean onScale(ScaleGestureDetector detector) {
                 float nextScale = detector.getScaleFactor();
-                mScale *= nextScale;
-                setScale();
+                zoomText(mScale * nextScale);
                 return true;
             }
 
@@ -111,14 +112,19 @@ public class NoteContentActivity extends AppCompatActivity {
         return mGesture.isInProgress() || super.dispatchTouchEvent(ev);
     }
 
-    private void setScale()
+    private void zoomText(float nextScale)
     {
+        nextScale = (float)Math.min(nextScale, 5.0);
+        nextScale = (float)Math.max(nextScale, 0.3);
+        mScale = nextScale;
         mEdit.setTextSize(TypedValue.COMPLEX_UNIT_PX, mDefaultTextSize * mScale);
     }
-    private String NewPath() {
-        File dir = NotesListAdapter.getDirectory(this);
+    private String NewPath() throws RuntimeException  {
+        File dir = NotesListAdapter.getOrAddDirectory(this);
+        if (dir == null)
+            throw new RuntimeException (getString(R.string.no_dest_dir));
         Date now = new Date();
-        File file = new File(dir, String.valueOf(System.currentTimeMillis()) );
+        File file = new File(dir, String.format("%d.txt", System.currentTimeMillis()) );
         return file.getPath();
     }
 
@@ -157,14 +163,8 @@ public class NoteContentActivity extends AppCompatActivity {
             protected Exception doInBackground(String... params) {
                 try {
                     String path = TextUtils.isEmpty(mPath) ? NewPath() : mPath;
-                    FileWriter writer = new FileWriter(path);
-                    try {
-                        writer.write(params[0]);
-                        mPath = path;
-                    }finally {
-                        writer.close();
-                    }
-                }catch(IOException e){
+                    UtfFile.Write(path, params[0]);
+                }catch(Exception e){
                     return e;
                 }
                 return null;
@@ -189,18 +189,10 @@ public class NoteContentActivity extends AppCompatActivity {
             protected String doInBackground(String... params) {
                 try{
                     String path = params[0];
-                    BufferedReader reader = new BufferedReader(new FileReader(path));
-                    try {
-                        StringBuilder builder = new StringBuilder();
-                        int c;
-                        while ((c = reader.read()) != -1)
-                            builder.append((char) c);
-                        mPath = path;
-                        return builder.toString();
-                    }finally {
-                        reader.close();
-                    }
-                }catch(IOException e){
+                    String ret = UtfFile.ReadAll(path);
+                    mPath = path;
+                    return ret;
+                }catch(Exception e){
                     Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG);
                 }
                 return null;

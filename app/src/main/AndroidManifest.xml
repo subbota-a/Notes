@@ -2,11 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="ru.yandex.subbota_job.notes">
 
-    <!--
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:description="@string/app_name"/>
-    -->
+    <permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:description="@string/permission"/>
 
     <application
         android:allowBackup="true"
@@ -29,7 +27,7 @@
             android:label="@string/title_activity_note_content"
             android:parentActivityName=".NotesListActivity"
             android:theme="@style/AppTheme.NoActionBar"
-            android:windowSoftInputMode="adjustResize|stateVisible"
+            android:windowSoftInputMode="adjustResize|stateHidden"
             >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"

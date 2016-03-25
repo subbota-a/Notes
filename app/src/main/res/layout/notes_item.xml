@@ -8,4 +8,8 @@
     android:text="@string/filePreviewNotLoaded"
     android:padding="16dp"
     android:layout_margin="8dp"
+    android:maxLines="2"
+    android:ellipsize="end"
     />
+<!--    android:backgroundTint="?android:tint"
+-->

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#3F51B5</color>
-    <color name="colorPrimaryDark">#303F9F</color>
-    <color name="colorAccent">#FF4081</color>
-    <color name="colorToolbarIcon">#FFFFFF</color>
+    <color name="colorPrimary">#ffef7b</color>
+    <color name="colorPrimaryDark">#f9a825</color>
+    <color name="colorAccent">#FF4A35</color>
+    <color name="colorToolbarIcon">#000000</color>
+    <color name="colorToolbarText">#000000</color>
+    <color name="colorNoteBackground">#FFFFFF</color>
 </resources>

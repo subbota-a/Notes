@@ -4,25 +4,24 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckedTextView;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.jar.Manifest;
+import java.util.SortedSet;
 
 /**
  * Created by subbota on 22.03.2016.
@@ -30,6 +29,7 @@ import java.util.jar.Manifest;
 public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.ViewHolder> {
     private final Context mContext;
     private Set<Integer> mSelected;
+
 
     static class ViewHolder extends RecyclerView.ViewHolder{
         public static ViewHolder create(ViewGroup parent)
@@ -83,32 +83,49 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
     }
     public void clearAllSelection()
     {
-        mSelected.clear();
-        notifyDataSetChanged();
+        if (mSelected.size() > 0) {
+            mSelected.clear();
+            notifyDataSetChanged();
+        }
     }
 
-    public static File getDirectory(Context context)
+    public static File getOrAddDirectory(Context context)
     {
-//        if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(context, "android.permission.WRITE_EXTERNAL_STORAGE")){
-//            return null;
-//        }
-//        String state = Environment.getExternalStorageState();
-//        if (state.equals(Environment.MEDIA_MOUNTED)){
-//            //File dir = new File(Environment.getExternalStoragePublicDirectory("Documents"), NotesListActivity.NotesDirectory);
-//            File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), NotesListActivity.NotesDirectory);
-//            if (!dir.isDirectory())
-//                dir.mkdirs();
-//            if (dir.isDirectory())
-//                return dir;
-//        }
-//        // Ничего не получается...
-        return context.getFilesDir();
+        String state = Environment.getExternalStorageState();
+        if (state.equals(Environment.MEDIA_MOUNTED)){
+            File dir = new File(Environment.getExternalStoragePublicDirectory("Documents"), NotesListActivity.NotesDirectory);
+            dir.mkdirs();
+            return dir.isDirectory() ? dir : null;
+        }else
+            return context.getApplicationContext().getFilesDir();
+    }
+    public void deleteSelectedAsync() {
+        Integer[] copy = new Integer[mSelected.size()];
+        mSelected.toArray(copy);
+        mSelected.clear();
+        Arrays.sort(copy);
+        final NoteDescription[] descr = new NoteDescription[copy.length];
+        for(int i=copy.length-1; i>=0; --i) {
+            descr[i] = mDataSource.get(copy[i]);
+            mDataSource.remove((int)copy[i]);
+        }
+        notifyDataSetChanged();
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... params) {
+                for(NoteDescription nd: descr)
+                    nd.mFileName.delete();
+                return null;
+            }
+        }.execute();
     }
     public void updateAsync(){
         new AsyncTask<Void, Void, ArrayList<NoteDescription>>() {
             @Override
             protected ArrayList<NoteDescription> doInBackground(Void... params) {
-                File file = getDirectory(mContext);
+                File file = getOrAddDirectory(mContext);
+                if (file == null)
+                    return null;
                 File[] fileNames = file.listFiles();
                 Arrays.sort(fileNames, new Comparator<File>() {
                     // make recent first
@@ -128,7 +145,8 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
 
             @Override
             protected void onPostExecute(ArrayList<NoteDescription> newDataSource) {
-                onDataSourceLoaded(newDataSource);
+                if (newDataSource != null)
+                    onDataSourceLoaded(newDataSource);
             }
         }.execute();
 
@@ -143,8 +161,7 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                 for(int i=0; i<mDataSource.size(); ++i){
                     NoteDescription item = mDataSource.get(i);
                     try {
-                        BufferedReader reader = new BufferedReader(new FileReader(item.mFileName));
-                        item.mPreviewText = reader.readLine();
+                        item.mPreviewText = UtfFile.ReadLine(item.mFileName.getPath());
                     }catch(IOException e) {
                         item.mPreviewText = e.getMessage();
                     }

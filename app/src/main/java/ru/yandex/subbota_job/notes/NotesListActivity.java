@@ -1,25 +1,30 @@
 package ru.yandex.subbota_job.notes;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.view.ActionMode;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.util.Arrays;
+
 public class NotesListActivity extends AppCompatActivity
 {
-
     NotesListAdapter mNotesAdaptor;
     RecyclerView mList;
+    FloatingActionButton mNewNote;
     public final static String NotesDirectory = "notes";
 
     @Override
@@ -29,16 +34,7 @@ public class NotesListActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                createNewNote();
-            }
-        });
-
         mNotesAdaptor = new NotesListAdapter(this);
-        mNotesAdaptor.updateAsync();
 
         mList = (RecyclerView)findViewById(R.id.listview);
         assert mList != null;
@@ -46,9 +42,22 @@ public class NotesListActivity extends AppCompatActivity
         mList.setAdapter(mNotesAdaptor);
 
         new RecyclerViewGestureDetector(this, mList, new GestureController());
+
+
+        mNewNote = (FloatingActionButton) findViewById(R.id.fab);
+        mNewNote.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                createNewNote();
+            }
+        });
     }
 
-    class GestureController extends GestureDetector.SimpleOnGestureListener{
+    class GestureController extends GestureDetector.SimpleOnGestureListener implements ActionMode.Callback{
+        private ActionMode mActionMode;
+        public boolean isSelectionMode(){
+            return mActionMode != null;
+        }
         int getAdapterPosition(MotionEvent e)
         {
             View itemView = mList.findChildViewUnder(e.getX(), e.getY());
@@ -61,7 +70,10 @@ public class NotesListActivity extends AppCompatActivity
             int position = getAdapterPosition(e);
             if (position == RecyclerView.NO_POSITION)
                 return false;
-            editNote(mNotesAdaptor.getItem(position));
+            if (isSelectionMode())
+                toggleSelection(position);
+            else
+                editNote(mNotesAdaptor.getItem(position));
             return true;
         }
 
@@ -70,7 +82,54 @@ public class NotesListActivity extends AppCompatActivity
             int position = getAdapterPosition(e);
             if (position == RecyclerView.NO_POSITION)
                 return;
+            toggleSelection(position);
+        }
+        void toggleSelection(int position)
+        {
+            if (!isSelectionMode())
+                beginSelectionMode();
             mNotesAdaptor.toggleSelection(position);
+            int count = mNotesAdaptor.getSelectionCount();
+            mActionMode.setTitle(String.valueOf(count));
+            if (count==0)
+                endSelectionMode();
+        }
+
+        private void endSelectionMode() {
+            mActionMode.finish();
+        }
+
+        private void beginSelectionMode() {
+            mActionMode = startSupportActionMode(this);
+            mNewNote.hide();
+        }
+
+        @Override
+        public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+            mode.getMenuInflater().inflate(R.menu.selected_notes_menu, menu);
+            return true;
+        }
+
+        @Override
+        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            return false;
+        }
+
+        @Override
+        public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+            if (item.getItemId() == R.id.action_delete) {
+                mNotesAdaptor.deleteSelectedAsync();
+                endSelectionMode();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void onDestroyActionMode(ActionMode mode) {
+            mActionMode = null;
+            mNotesAdaptor.clearAllSelection();
+            mNewNote.show();
         }
     }
     private void editNote(NoteDescription item) {
@@ -82,6 +141,22 @@ public class NotesListActivity extends AppCompatActivity
     private void createNewNote() {
         Intent intent = new Intent(this, NoteContentActivity.class);
         startActivityForResult(intent, 0);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")){
+            ActivityCompat.requestPermissions(this, new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"}, 0);
+        }else
+            mNotesAdaptor.updateAsync();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (!Arrays.asList(grantResults).contains(PackageManager.PERMISSION_DENIED))
+            mNotesAdaptor.updateAsync();
     }
 
     @Override
