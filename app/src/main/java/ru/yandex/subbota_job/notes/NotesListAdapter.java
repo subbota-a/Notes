@@ -1,27 +1,22 @@
 package ru.yandex.subbota_job.notes;
 
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Environment;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.SortedSet;
 
 /**
  * Created by subbota on 22.03.2016.
@@ -29,6 +24,7 @@ import java.util.SortedSet;
 public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.ViewHolder> {
     private final Context mContext;
     private Set<Integer> mSelected;
+    private AsyncTask<String, NoteDescription, Void> mLoaderTask;
 
 
     static class ViewHolder extends RecyclerView.ViewHolder{
@@ -46,7 +42,7 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
         }
         public void setSelected(boolean selected){ itemView.setSelected(selected);}
     }
-    private ArrayList<NoteDescription> mDataSource;
+    private ArrayList<NoteDescription> mDataSource = new ArrayList<NoteDescription>();
     public NotesListAdapter(Context context)
     {
         mContext = context;
@@ -119,66 +115,65 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
             }
         }.execute();
     }
-    public void updateAsync(){
-        new AsyncTask<Void, Void, ArrayList<NoteDescription>>() {
+
+    @Override
+    public int getItemCount() {
+        return mDataSource == null ? 0 : mDataSource.size();
+    }
+
+    public void updateAsync(String substring)
+    {
+        if (mLoaderTask != null){
+            mLoaderTask.cancel(false);
+            mLoaderTask = null;
+        }
+        mDataSource.clear();
+        notifyDataSetChanged();
+        mLoaderTask = new AsyncTask<String, NoteDescription, Void>() {
             @Override
-            protected ArrayList<NoteDescription> doInBackground(Void... params) {
+            protected Void doInBackground(String... params) {
+                String filterString = TextUtils.isEmpty(params[0]) ? null : params[0].toLowerCase();
                 File file = getOrAddDirectory(mContext);
                 if (file == null)
                     return null;
-                File[] fileNames = file.listFiles();
-                Arrays.sort(fileNames, new Comparator<File>() {
+                File[] files = file.listFiles();
+                Arrays.sort(files, new Comparator<File>() {
                     // make recent first
                     @Override
                     public int compare(File lhs, File rhs) {
                         return (int)(rhs.lastModified()-lhs.lastModified());
                     }
                 });
-                ArrayList<NoteDescription> ret = new ArrayList<NoteDescription>(fileNames.length);
-                for(final File f: fileNames) {
-                    NoteDescription item = new NoteDescription();
-                    item.mFileName = f;
-                    ret.add(item);
-                }
-                return ret;
-            }
-
-            @Override
-            protected void onPostExecute(ArrayList<NoteDescription> newDataSource) {
-                if (newDataSource != null)
-                    onDataSourceLoaded(newDataSource);
-            }
-        }.execute();
-
-    }
-
-    private void onDataSourceLoaded(ArrayList<NoteDescription> newDataSource) {
-        mDataSource = newDataSource;
-        notifyDataSetChanged();
-        new AsyncTask<Void, Integer, Void>() {
-            @Override
-            protected Void doInBackground(Void... params) {
-                for(int i=0; i<mDataSource.size(); ++i){
-                    NoteDescription item = mDataSource.get(i);
+                for(File f: files){
+                    if (isCancelled())
+                        break;
                     try {
-                        item.mPreviewText = UtfFile.ReadLine(item.mFileName.getPath());
+                        String content = UtfFile.ReadAll(f.getPath());
+                        boolean populate;
+                        if (TextUtils.isEmpty(filterString))
+                            populate = true;
+                        else {
+                            String lowerCase = content.toLowerCase();
+                            populate = lowerCase.contains(filterString);
+                        }
+                        if (populate) {
+                            NoteDescription item = new NoteDescription();
+                            item.mPreviewText = UtfFile.getLine(content);
+                            item.mFileName = f;
+                            publishProgress(item);
+                        }
                     }catch(IOException e) {
-                        item.mPreviewText = e.getMessage();
                     }
-                    publishProgress(i);
                 }
                 return null;
             }
-
             @Override
-            protected void onProgressUpdate(Integer... values) {
-                notifyItemChanged(values[0]);
+            protected void onProgressUpdate(NoteDescription... values) {
+                if (isCancelled())
+                    return;
+                mDataSource.add(values[0]);
+                notifyItemInserted(mDataSource.size()-1);
             }
-        }.execute();
-    }
-
-    @Override
-    public int getItemCount() {
-        return mDataSource == null ? 0 : mDataSource.size();
+        }.execute(substring);
     }
 }

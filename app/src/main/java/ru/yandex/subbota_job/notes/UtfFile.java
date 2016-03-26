@@ -34,17 +34,17 @@ public final class UtfFile {
             inputStream.close();
         }
     }
-    public static String ReadLine(String path) throws IOException {
-        String s = ReadAll(path);
-        int n = s.indexOf('\n');
-        int r = s.indexOf('\r');
+    public static String getLine(String text)
+    {
+        int n = text.indexOf('\n');
+        int r = text.indexOf('\r');
         if (n == -1 && r == -1)
-            return s;
+            return text;
         if (n == -1)
             n = Integer.MAX_VALUE;
         if (r == -1)
             r = Integer.MAX_VALUE;
-        return s.substring(0, Math.min(n,r));
+        return text.substring(0, Math.min(n,r));
     }
     public static void Write(String path, String data) throws IOException {
         FileOutputStream outputStream = new FileOutputStream(path);

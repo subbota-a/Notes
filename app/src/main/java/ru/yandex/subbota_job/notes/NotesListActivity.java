@@ -1,5 +1,7 @@
 package ru.yandex.subbota_job.notes;
 
+import android.app.SearchManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -7,10 +9,14 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.ActionMode;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
+import android.util.Log;
+import android.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -25,6 +31,7 @@ public class NotesListActivity extends AppCompatActivity
     NotesListAdapter mNotesAdaptor;
     RecyclerView mList;
     FloatingActionButton mNewNote;
+    String mFilterString;
     public final static String NotesDirectory = "notes";
 
     @Override
@@ -132,6 +139,7 @@ public class NotesListActivity extends AppCompatActivity
             mNewNote.show();
         }
     }
+
     private void editNote(NoteDescription item) {
         Intent intent = new Intent(this, NoteContentActivity.class);
         intent.setData(Uri.fromFile(item.mFileName));
@@ -149,42 +157,83 @@ public class NotesListActivity extends AppCompatActivity
         if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")){
             ActivityCompat.requestPermissions(this, new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"}, 0);
         }else
-            mNotesAdaptor.updateAsync();
+            mNotesAdaptor.updateAsync(mFilterString);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (!Arrays.asList(grantResults).contains(PackageManager.PERMISSION_DENIED))
-            mNotesAdaptor.updateAsync();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        mNotesAdaptor.updateAsync();
+            mNotesAdaptor.updateAsync(mFilterString);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_notes_list, menu);
+        MenuItem mi = menu.findItem(R.id.action_search);
+        new Search(mi);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-//        if (id == R.id.action_settings) {
-//            return true;
-//        }
-
         return super.onOptionsItemSelected(item);
     }
 
+    class Search implements MenuItemCompat.OnActionExpandListener
+            , MenuItem.OnMenuItemClickListener
+            , SearchView.OnQueryTextListener
+            , SearchView.OnCloseListener
+    {
+        final SearchView mSearchView;
+        final MenuItem mItem;
+        public Search(MenuItem mi)
+        {
+            mItem = mi;
+            mi.setOnMenuItemClickListener(this);
+            MenuItemCompat.setOnActionExpandListener(mi, this);
+            mSearchView = (android.widget.SearchView) mi.getActionView();
+            mSearchView.setQueryHint(getResources().getString(R.string.action_search));
+            mSearchView.setSubmitButtonEnabled(true);
+            mSearchView.setOnCloseListener(this);
+        }
+        @Override
+        public boolean onMenuItemClick(MenuItem item) {
+            mSearchView.setQuery(mFilterString, false);
+            mSearchView.setIconified(false);
+            return true;
+        }
+        @Override
+        public boolean onMenuItemActionExpand(MenuItem item) {
+            return true;
+        }
+
+        @Override
+        public boolean onMenuItemActionCollapse(MenuItem item) {
+            Log.d("Search", "onMenuItemActionCollapse");
+            mSearchView.clearFocus();
+            if (!TextUtils.isEmpty(mFilterString))
+                mNotesAdaptor.updateAsync(null);
+            mFilterString = null;
+            return true;
+        }
+        @Override
+        public boolean onQueryTextSubmit(String query) {
+            mFilterString = query;
+            mNotesAdaptor.updateAsync(mFilterString);
+            return true;
+        }
+
+        @Override
+        public boolean onQueryTextChange(String newText) {
+            return false;
+        }
+
+        @Override
+        public boolean onClose() {
+            Log.d("Search", "onClose");
+            mItem.collapseActionView();
+            return false;
+        }
+    }
 }
