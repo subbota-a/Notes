@@ -196,6 +196,7 @@ public class NotesListActivity extends AppCompatActivity
             mSearchView.setQueryHint(getResources().getString(R.string.action_search));
             mSearchView.setSubmitButtonEnabled(true);
             mSearchView.setOnCloseListener(this);
+            mSearchView.setOnQueryTextListener(this);
         }
         @Override
         public boolean onMenuItemClick(MenuItem item) {
@@ -219,6 +220,7 @@ public class NotesListActivity extends AppCompatActivity
         }
         @Override
         public boolean onQueryTextSubmit(String query) {
+            Log.d("Search", "onQueryTextSubmit");
             mFilterString = query;
             mNotesAdaptor.updateAsync(mFilterString);
             return true;
