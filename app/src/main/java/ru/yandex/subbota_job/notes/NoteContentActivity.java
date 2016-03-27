@@ -15,6 +15,7 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -101,6 +102,43 @@ public class NoteContentActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {
                 updateShareProvider();
                 mChanged = true;
+            }
+        });
+        mEdit.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                if (menu.findItem(android.R.id.shareText) == null) {
+                    MenuItem item = menu.add(0, android.R.id.shareText, 100, R.string.share);
+                    item.setIcon(R.drawable.ic_share_24dp);
+                    item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+                }
+                return true;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                Log.d("onActionItemClicked", item.getTitle().toString());
+                Log.d("onActionItemClicked", String.valueOf(item.getGroupId()));
+                if (item.getItemId() == android.R.id.shareText) {
+                    Log.d("onActionItemClicked", "android.R.id.shareText");
+                    Intent intent = new Intent(Intent.ACTION_SEND);
+                    intent.setType(getResources().getString(R.string.noteMimeType));
+                    String s = mEdit.getText().toString().substring(mEdit.getSelectionStart(), mEdit.getSelectionEnd());
+                    intent.putExtra(Intent.EXTRA_TEXT, s);
+                    startActivity(intent);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+
             }
         });
         mScale = getPreferences(Context.MODE_PRIVATE).getFloat(keyScale, 1);
