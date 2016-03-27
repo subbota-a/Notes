@@ -3,7 +3,7 @@
     <color name="colorPrimary">#ffef7b</color>
     <color name="colorPrimaryDark">#f9a825</color>
     <color name="colorAccent">#FF4A35</color>
-    <color name="colorToolbarIcon">#000000</color>
-    <color name="colorToolbarText">#000000</color>
+    <color name="colorToolbarIcon">#0a00bf</color>
+    <color name="colorToolbarText">#0a00bf</color>
     <color name="colorNoteBackground">#FFFFFF</color>
 </resources>

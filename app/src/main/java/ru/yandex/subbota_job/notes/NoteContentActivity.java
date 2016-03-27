@@ -26,17 +26,16 @@ import android.widget.Toast;
 import java.io.File;
 
 public class NoteContentActivity extends AppCompatActivity {
-    String mPath;
-    EditText mEdit;
-    boolean mChanged = false;
-    float mScale = 1;
-    float mDefaultTextSize;
-    ScaleGestureDetector mGesture;
-    ShareActionProvider mShareProvider;
-    EditText mNoteTitle;
+    private String mPath;
+    private EditText mEdit;
+    private boolean mChanged = false;
+    private float mScale = 1;
+    private float mDefaultTextSize;
+    private ScaleGestureDetector mGesture;
+    private ShareActionProvider mShareProvider;
+    private EditText mNoteTitle;
     static final String keyPath = NoteContentActivity.class.getName() + "path";
     static final String keyScale = "scale";
-    String defaultTitle;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,10 +49,8 @@ public class NoteContentActivity extends AppCompatActivity {
         actionBar.setCustomView(R.layout.note_title_layout);
         actionBar.setDisplayShowCustomEnabled(true);
         actionBar.setDisplayShowTitleEnabled(false);
-        defaultTitle = getResources().getString(R.string.title_activity_note_content);
         mNoteTitle = (EditText)actionBar.getCustomView().findViewById(R.id.title_edit);
         assert mNoteTitle != null;
-        mNoteTitle.setText(defaultTitle);
         mNoteTitle.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -136,8 +133,8 @@ public class NoteContentActivity extends AppCompatActivity {
 
     private void zoomText(float nextScale)
     {
-        nextScale = (float)Math.min(nextScale, 5.0);
-        nextScale = (float)Math.max(nextScale, 0.3);
+        nextScale = (float)Math.min(nextScale, 3.0);
+        nextScale = (float)Math.max(nextScale, 0.5);
         mScale = nextScale;
         mEdit.setTextSize(TypedValue.COMPLEX_UNIT_PX, mDefaultTextSize * mScale);
     }
@@ -216,10 +213,7 @@ public class NoteContentActivity extends AppCompatActivity {
     }
 
     private String getCustomTitle() {
-        String s = mNoteTitle.getText().toString();
-        if (TextUtils.isEmpty(s) || s.contentEquals(defaultTitle))
-            return null;
-        return s;
+        return mNoteTitle.getText().toString();
     }
 
     private void LoadContentAsync(String path) {
@@ -241,7 +235,7 @@ public class NoteContentActivity extends AppCompatActivity {
             protected void onPostExecute(String[] s) {
                 if (s != null) {
                     mEdit.setText(s[1]);
-                    mNoteTitle.setText(s[0]==null?defaultTitle:s[0]);
+                    mNoteTitle.setText(s[0]);
                     mChanged = false;
                 }
             }
