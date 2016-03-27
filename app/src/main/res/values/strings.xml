@@ -3,11 +3,12 @@
     <string name="action_select">Выбрать</string>
     <string name="action_search">Поиск</string>
     <string name="filePreviewNotLoaded">Загружается...</string>
-    <string name="title_activity_note_content">Заметки</string>
+    <string name="title_activity_note_content">Заметка</string>
     <string name="noteMimeType">text/plain</string>
     <string name="noteSaved">Заметка сохранена</string>
     <string name="share">Поделиться</string>
     <string name="permission">Мне нужно cохранить Ваши заметки</string>
     <string name="no_dest_dir">Нет прав сохранить файл</string>
     <string name="action_delete">Удалить</string>
+    <string name="title_action">Изменить название заметки</string>
 </resources>

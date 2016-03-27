@@ -158,7 +158,8 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                         }
                         if (populate) {
                             NoteDescription item = new NoteDescription();
-                            item.mPreviewText = UtfFile.getLine(content);
+                            String[] pair = UtfFile.Split(content);
+                            item.mPreviewText = pair[0]==null ? UtfFile.getLine(pair[1]) : pair[0];
                             item.mFileName = f;
                             publishProgress(item);
                         }

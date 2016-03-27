@@ -1,5 +1,7 @@
 package ru.yandex.subbota_job.notes;
 
+import android.text.TextUtils;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -8,6 +10,27 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 public final class UtfFile {
+    static final String beginTag = "<title>";
+    static final String endTag = "</title>";
+    public static String[] Split(String fileContent)
+    {
+        String[] ret = new String[2];
+        int endTagPos = fileContent.indexOf(endTag);
+        if (fileContent.startsWith(beginTag) && endTagPos >=0){
+            ret[0] = fileContent.substring(beginTag.length(), endTagPos);
+            ret[1] = fileContent.substring(endTagPos+endTag.length());
+        }else
+            ret[1] = fileContent;
+        return ret;
+    }
+    public static String Join(String title, String content)
+    {
+        StringBuilder sb = new StringBuilder();
+        if (!TextUtils.isEmpty(title))
+            sb.append(beginTag).append(title).append(endTag);
+        sb.append(content);
+        return sb.toString();
+    }
     public static String ReadAll(String path) throws IOException {
         FileInputStream inputStream = new FileInputStream(path);
         try {

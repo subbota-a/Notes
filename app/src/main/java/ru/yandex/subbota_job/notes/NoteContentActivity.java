@@ -5,11 +5,15 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.view.MenuItemCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.ShareActionProvider;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,15 +23,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.Toast;
-
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.Date;
 
 public class NoteContentActivity extends AppCompatActivity {
     String mPath;
@@ -36,8 +32,11 @@ public class NoteContentActivity extends AppCompatActivity {
     float mScale = 1;
     float mDefaultTextSize;
     ScaleGestureDetector mGesture;
+    ShareActionProvider mShareProvider;
+    EditText mNoteTitle;
     static final String keyPath = NoteContentActivity.class.getName() + "path";
     static final String keyScale = "scale";
+    String defaultTitle;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,7 +44,28 @@ public class NoteContentActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         assert toolbar != null;
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        ActionBar actionBar = getSupportActionBar();
+        assert actionBar != null;
+        actionBar.setDisplayHomeAsUpEnabled(true);
+        actionBar.setCustomView(R.layout.note_title_layout);
+        actionBar.setDisplayShowCustomEnabled(true);
+        actionBar.setDisplayShowTitleEnabled(false);
+        defaultTitle = getResources().getString(R.string.title_activity_note_content);
+        mNoteTitle = (EditText)actionBar.getCustomView().findViewById(R.id.title_edit);
+        assert mNoteTitle != null;
+        mNoteTitle.setText(defaultTitle);
+        mNoteTitle.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+            @Override
+            public void afterTextChanged(Editable s) {
+                mChanged = true;
+            }
+        });
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -68,6 +88,7 @@ public class NoteContentActivity extends AppCompatActivity {
     }
 
     private void initEdit() {
+        Log.d(toString(), "initEdit");
         mEdit = (EditText)findViewById(R.id.editor);
         assert mEdit != null;
         mEdit.addTextChangedListener(new TextWatcher() {
@@ -81,6 +102,7 @@ public class NoteContentActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
+                updateShareProvider();
                 mChanged = true;
             }
         });
@@ -123,7 +145,6 @@ public class NoteContentActivity extends AppCompatActivity {
         File dir = NotesListAdapter.getOrAddDirectory(this);
         if (dir == null)
             throw new RuntimeException (getString(R.string.no_dest_dir));
-        Date now = new Date();
         File file = new File(dir, String.format("%d.txt", System.currentTimeMillis()) );
         return file.getPath();
     }
@@ -143,20 +164,24 @@ public class NoteContentActivity extends AppCompatActivity {
             saveContentAsync();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_note_content, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.share_action){
+    private void updateShareProvider()
+    {
+        if (mShareProvider!=null) {
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType(getResources().getString(R.string.noteMimeType));
             intent.putExtra(Intent.EXTRA_TEXT, mEdit.getText().toString());
-            startActivity(intent);
+            mShareProvider.setShareIntent(intent);
         }
+    }
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_note_content, menu);
+        mShareProvider = (ShareActionProvider)MenuItemCompat.getActionProvider(menu.findItem(R.id.share_action));
+        updateShareProvider();
+        return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
         return super.onOptionsItemSelected(item);
     }
 
@@ -169,7 +194,8 @@ public class NoteContentActivity extends AppCompatActivity {
             protected Exception doInBackground(String... params) {
                 try {
                     String path = TextUtils.isEmpty(mPath) ? NewPath() : mPath;
-                    UtfFile.Write(path, params[0]);
+                    String all = UtfFile.Join(params[0], params[1]);
+                    UtfFile.Write(path, all);
                 }catch(Exception e){
                     return e;
                 }
@@ -185,29 +211,37 @@ public class NoteContentActivity extends AppCompatActivity {
                     toast = Toast.makeText(getApplicationContext(), R.string.noteSaved, Toast.LENGTH_SHORT);
                 toast.show();
             }
-        }.execute(editable.toString());
+        }.execute(getCustomTitle(),editable.toString());
         mChanged = false;
     }
 
+    private String getCustomTitle() {
+        String s = mNoteTitle.getText().toString();
+        if (TextUtils.isEmpty(s) || s.contentEquals(defaultTitle))
+            return null;
+        return s;
+    }
+
     private void LoadContentAsync(String path) {
-        new AsyncTask<String, Void, String>() {
+        new AsyncTask<String, Void, String[]>() {
             @Override
-            protected String doInBackground(String... params) {
+            protected String[] doInBackground(String... params) {
                 try{
                     String path = params[0];
                     String ret = UtfFile.ReadAll(path);
                     mPath = path;
-                    return ret;
+                    return UtfFile.Split(ret);
                 }catch(Exception e){
-                    Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG);
+                    Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
                 }
                 return null;
             }
 
             @Override
-            protected void onPostExecute(String s) {
+            protected void onPostExecute(String[] s) {
                 if (s != null) {
-                    mEdit.setText(s);
+                    mEdit.setText(s[1]);
+                    mNoteTitle.setText(s[0]==null?defaultTitle:s[0]);
                     mChanged = false;
                 }
             }

@@ -38,8 +38,9 @@
             android:layout_height="match_parent"
             android:inputType="textMultiLine|text"
             android:gravity="top|left"
-            android:background="@android:color/transparent"
-            />
+            android:background="@android:color/transparent">
+            <requestFocus />
+        </EditText>
     </android.support.v4.widget.NestedScrollView>
 
 </android.support.design.widget.CoordinatorLayout>
