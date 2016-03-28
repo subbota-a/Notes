@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBar;
@@ -112,6 +113,11 @@ public class NoteContentActivity extends AppCompatActivity {
 
             @Override
             public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                for (int i = 0; i < menu.size(); ++i) {
+                    MenuItem item = menu.getItem(i);
+                    Log.d("onPrepareActionMode", String.format("%s: %d", item.getTitle().toString(), item.getItemId()));
+                }
+                View v = mode.getCustomView();
                 if (menu.findItem(android.R.id.shareText) == null) {
                     MenuItem item = menu.add(0, android.R.id.shareText, 100, R.string.share);
                     item.setIcon(R.drawable.ic_share_24dp);
