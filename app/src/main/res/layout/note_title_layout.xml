@@ -10,7 +10,8 @@
         android:background="@android:color/transparent"
         android:inputType="textNoSuggestions|text"
         android:singleLine="true"
-
         style="@style/TextAppearance.AppCompat.Widget.ActionBar.Title"
-        android:hint="@string/title_activity_note_content" />
+        android:nextFocusDown="@id/editor"
+        android:hint="@string/title_activity_note_content"
+        android:imeOptions="flagNavigateNext"/>
 </LinearLayout>

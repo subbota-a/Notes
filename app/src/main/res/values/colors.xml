@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="actionModeBackground">#fff9c4</color>
     <color name="colorPrimary">#ffef7b</color>
     <color name="colorPrimaryDark">#f9a825</color>
     <color name="colorAccent">#FF4A35</color>

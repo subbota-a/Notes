@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.internal.view.SupportMenuItem;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -108,6 +109,8 @@ public class NoteContentActivity extends AppCompatActivity {
         mEdit.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                Log.d("ActionModeCallback", "onCreateActionMode");
+                updateShareProvider();
                 return true;
             }
 
@@ -117,10 +120,10 @@ public class NoteContentActivity extends AppCompatActivity {
                     MenuItem item = menu.getItem(i);
                     Log.d("onPrepareActionMode", String.format("%s: %d", item.getTitle().toString(), item.getItemId()));
                 }
-                View v = mode.getCustomView();
+                Log.d("onPrepareActionMode",menu.getClass().toString());
                 if (menu.findItem(android.R.id.shareText) == null) {
                     MenuItem item = menu.add(0, android.R.id.shareText, 100, R.string.share);
-                    item.setIcon(R.drawable.ic_share_24dp);
+                    item.setIcon(android.R.drawable.ic_menu_share);
                     item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
                 }
                 return true;
@@ -129,13 +132,11 @@ public class NoteContentActivity extends AppCompatActivity {
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
                 Log.d("onActionItemClicked", item.getTitle().toString());
-                Log.d("onActionItemClicked", String.valueOf(item.getGroupId()));
                 if (item.getItemId() == android.R.id.shareText) {
-                    Log.d("onActionItemClicked", "android.R.id.shareText");
                     Intent intent = new Intent(Intent.ACTION_SEND);
                     intent.setType(getResources().getString(R.string.noteMimeType));
-                    String s = mEdit.getText().toString().substring(mEdit.getSelectionStart(), mEdit.getSelectionEnd());
-                    intent.putExtra(Intent.EXTRA_TEXT, s);
+                    CharSequence s = mEdit.getText().subSequence(mEdit.getSelectionStart(), mEdit.getSelectionEnd());
+                    intent.putExtra(Intent.EXTRA_TEXT, s.toString());
                     startActivity(intent);
                     return true;
                 }
@@ -144,7 +145,8 @@ public class NoteContentActivity extends AppCompatActivity {
 
             @Override
             public void onDestroyActionMode(ActionMode mode) {
-
+                Log.d("ActionMode.Callback", "onDestroyActionMode");
+                updateShareProvider();
             }
         });
         mScale = getPreferences(Context.MODE_PRIVATE).getFloat(keyScale, 1);
@@ -210,7 +212,11 @@ public class NoteContentActivity extends AppCompatActivity {
         if (mShareProvider!=null) {
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType(getResources().getString(R.string.noteMimeType));
-            intent.putExtra(Intent.EXTRA_TEXT, mEdit.getText().toString());
+            if (mEdit.getSelectionStart()!=mEdit.getSelectionEnd())
+                intent.putExtra(Intent.EXTRA_TEXT, mEdit.getText().subSequence(mEdit.getSelectionStart(),mEdit.getSelectionEnd()).toString());
+            else
+                intent.putExtra(Intent.EXTRA_TEXT, mEdit.getText().toString());
+            Log.d("mShareProvider", intent.getStringExtra(Intent.EXTRA_TEXT));
             mShareProvider.setShareIntent(intent);
         }
     }
