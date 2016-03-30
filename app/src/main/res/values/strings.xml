@@ -11,4 +11,6 @@
     <string name="no_dest_dir">Нет прав сохранить файл</string>
     <string name="action_delete">Удалить</string>
     <string name="title_action">Изменить название заметки</string>
+    <string name="removed_notes_message">Удалено заметок: %d</string>
+    <string name="undo">Отменить</string>
 </resources>

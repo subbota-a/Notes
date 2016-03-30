@@ -3,6 +3,7 @@ package ru.yandex.subbota_job.notes;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.support.design.widget.Snackbar;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -25,6 +26,7 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
     private final Context mContext;
     private Set<Integer> mSelected;
     private AsyncTask<String, NoteDescription, Void> mLoaderTask;
+    private String mFilterString;
 
 
     static class ViewHolder extends RecyclerView.ViewHolder{
@@ -95,7 +97,7 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
         }else
             return context.getApplicationContext().getFilesDir();
     }
-    public void deleteSelectedAsync() {
+    public void deleteSelectedAsync(View coordinatorLayout) {
         Integer[] copy = new Integer[mSelected.size()];
         mSelected.toArray(copy);
         mSelected.clear();
@@ -106,14 +108,32 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
             mDataSource.remove((int)copy[i]);
         }
         notifyDataSetChanged();
-        new AsyncTask<Void, Void, Void>() {
+        String message = coordinatorLayout.getResources().getString(R.string.removed_notes_message, copy.length);
+        Snackbar snackbar = Snackbar.make(coordinatorLayout, message, Snackbar.LENGTH_LONG);
+        snackbar.setAction(R.string.undo, new View.OnClickListener() {
             @Override
-            protected Void doInBackground(Void... params) {
-                for(NoteDescription nd: descr)
-                    nd.mFileName.delete();
-                return null;
+            public void onClick(View v) {
             }
-        }.execute();
+        });
+        snackbar.setCallback(new Snackbar.Callback() {
+            @Override
+            public void onDismissed(Snackbar snackbar, int event) {
+                super.onDismissed(snackbar, event);
+                if (event != Snackbar.Callback.DISMISS_EVENT_ACTION) {
+                    new AsyncTask<Void, Void, Void>() {
+                        @Override
+                        protected Void doInBackground(Void... params) {
+                            for (NoteDescription nd : descr)
+                                nd.mFileName.delete();
+                            return null;
+                        }
+                    }.execute();
+                } else {
+                    updateAsync(mFilterString);
+                }
+            }
+        });
+        snackbar.show();
     }
 
     @Override
@@ -123,6 +143,7 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
 
     public void updateAsync(String substring)
     {
+        mFilterString = substring;
         if (mLoaderTask != null){
             mLoaderTask.cancel(false);
             mLoaderTask = null;

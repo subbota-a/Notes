@@ -125,7 +125,7 @@ public class NotesListActivity extends AppCompatActivity
         @Override
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
             if (item.getItemId() == R.id.action_delete) {
-                mNotesAdaptor.deleteSelectedAsync();
+                mNotesAdaptor.deleteSelectedAsync(findViewById(R.id.coordinatorLayout));
                 endSelectionMode();
                 return true;
             }
