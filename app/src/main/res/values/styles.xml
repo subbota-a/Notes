@@ -1,12 +1,33 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light">
-        <!-- Customize your theme here.
+    <style name="Theme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
+        <!--item name="toolbarStyle">?attr/toolbarStyle</item-->
+        <!--item name="actionModeStyle">@style/ActionModeStyle</item-->
+        <item name="actionModeBackground">@drawable/action_mode_background</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorControlNormal">@color/colorToolbarIcon</item>
+        <item name="titleTextColor">@color/colorToolbarText</item>
+        <item name="actionBarTheme">@style/ActionBarOverlayTheme</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item> -->
+        <item name="colorAccent">@color/colorAccent</item>
     </style>
-
+    <style name="Theme.AppTheme"></style>
+    <style name="ActionBarOverlayTheme" parent="ThemeOverlay.AppCompat.ActionBar">
+        <!--item name="colorControlNormal">#234fff</item-->
+        <item name="android:textColorPrimary">?attr/titleTextColor</item>
+    </style>
+    <!--style name="ToolbarStyle" parent="Widget.AppCompat.Toolbar">
+        <item name="titleTextAppearance">@style/ToolbarTitleTextStyle</item>
+    </style-->
+    <!--style name="ActionModeStyle" parent="Widget.AppCompat.ActionMode">
+        <item name="titleTextStyle">@style/ToolbarTitleTextStyle</item>
+    </style-->
+    <style name="ToolbarTitleTextStyle" parent="TextAppearance.Widget.AppCompat.Toolbar.Title">
+        <item name="android:textColor">?attr/titleTextColor</item>
+    </style>
+    <!--
     <style name="AppTheme.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
@@ -14,14 +35,14 @@
     </style>
 
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.ActionBar">
-        <!-- Customize your theme here.
+        <!- - Customize your theme here.
         <item name="android:background">@color/colorPrimary</item>
         <item name="android:textColorPrimary">@color/colorToolbarText</item>
         <item name="actionModeBackground">@color/actionModeBackground</item>
-        -->
+        - ->
     </style>
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" >
     </style>
-
+    -->
 </resources>

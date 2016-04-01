@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="actionModeBackground">#fff9c4</color>
-    <color name="colorPrimary">#ffef7b</color>
-    <color name="colorPrimaryDark">#f9a825</color>
-    <color name="colorAccent">#FF4A35</color>
-    <color name="colorToolbarIcon">#0a00bf</color>
-    <color name="colorToolbarText">#0a00bf</color>
+    <color name="actionModeBackground">#facebf</color>
+    <color name="colorPrimary">#ffcc80</color>
+    <color name="colorPrimaryDark">#dfab5e</color>
+    <color name="colorAccent">#ff4a35</color>
+    <color name="colorToolbarIcon">#424242</color>
+    <color name="colorToolbarText">#424242</color>
+    <color name="colorNoteItemBackground">#ffdca8</color>
+    <color name="colorNoteItemBackgroundSelected">#dfab5e</color>
     <color name="colorNoteBackground">#FFFFFF</color>
 </resources>

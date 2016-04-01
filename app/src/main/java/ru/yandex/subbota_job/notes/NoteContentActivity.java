@@ -2,11 +2,10 @@ package ru.yandex.subbota_job.notes;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.internal.view.SupportMenuItem;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -18,6 +17,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.ActionMode;
+import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -26,6 +26,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.Toast;
+
 import java.io.File;
 
 public class NoteContentActivity extends AppCompatActivity {
@@ -49,10 +50,11 @@ public class NoteContentActivity extends AppCompatActivity {
         ActionBar actionBar = getSupportActionBar();
         assert actionBar != null;
         actionBar.setDisplayHomeAsUpEnabled(true);
-        actionBar.setCustomView(R.layout.note_title_layout);
-        actionBar.setDisplayShowCustomEnabled(true);
+        //actionBar.setCustomView(R.layout.note_title_layout);
+        //actionBar.setDisplayShowCustomEnabled(true);
         actionBar.setDisplayShowTitleEnabled(false);
-        mNoteTitle = (EditText)actionBar.getCustomView().findViewById(R.id.title_edit);
+        //mNoteTitle = (EditText)actionBar.getCustomView().findViewById(R.id.title_edit);
+        mNoteTitle = (EditText)findViewById(R.id.title_edit);
         assert mNoteTitle != null;
         mNoteTitle.addTextChangedListener(new TextWatcher() {
             @Override
@@ -120,10 +122,10 @@ public class NoteContentActivity extends AppCompatActivity {
                     MenuItem item = menu.getItem(i);
                     Log.d("onPrepareActionMode", String.format("%s: %d", item.getTitle().toString(), item.getItemId()));
                 }
-                Log.d("onPrepareActionMode",menu.getClass().toString());
+                Log.d("onPrepareActionMode", menu.getClass().toString());
                 if (menu.findItem(android.R.id.shareText) == null) {
                     MenuItem item = menu.add(0, android.R.id.shareText, 100, R.string.share);
-                    item.setIcon(android.R.drawable.ic_menu_share);
+                    item.setIcon(R.drawable.ic_share_24dp);
                     item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
                 }
                 return true;
@@ -147,6 +149,15 @@ public class NoteContentActivity extends AppCompatActivity {
             public void onDestroyActionMode(ActionMode mode) {
                 Log.d("ActionMode.Callback", "onDestroyActionMode");
                 updateShareProvider();
+            }
+        });
+        mEdit.setOnCreateContextMenuListener(new View.OnCreateContextMenuListener() {
+            @Override
+            public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+                Log.d("onCreateContextMenu", "called");
+                for (int i = 0; i < menu.size(); ++i)
+                    Log.d("ContextMenu", menu.getItem(i).toString());
+                return;
             }
         });
         mScale = getPreferences(Context.MODE_PRIVATE).getFloat(keyScale, 1);
