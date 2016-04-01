@@ -44,7 +44,6 @@ public class NotesListActivity extends AppCompatActivity
 
         ActionBar actionBar = getSupportActionBar();
         assert actionBar != null;
-        actionBar.setDisplayHomeAsUpEnabled(true);
 
         mNotesAdaptor = new NotesListAdapter(this);
 
@@ -199,7 +198,8 @@ public class NotesListActivity extends AppCompatActivity
             MenuItemCompat.setOnActionExpandListener(mi, this);
             mSearchView = (android.widget.SearchView) mi.getActionView();
             mSearchView.setQueryHint(getResources().getString(R.string.action_search));
-            mSearchView.setSubmitButtonEnabled(true);
+            mSearchView.setSubmitButtonEnabled(false);
+            mSearchView.setIconified(false);
             mSearchView.setOnCloseListener(this);
             mSearchView.setOnQueryTextListener(this);
         }
@@ -226,13 +226,22 @@ public class NotesListActivity extends AppCompatActivity
         @Override
         public boolean onQueryTextSubmit(String query) {
             Log.d("Search", "onQueryTextSubmit");
-            mFilterString = query;
-            mNotesAdaptor.updateAsync(mFilterString);
             return true;
         }
 
+        String setNullOnEmpty(String s)
+        {
+            return TextUtils.isEmpty(s) ? null : s;
+        }
         @Override
-        public boolean onQueryTextChange(String newText) {
+        public boolean onQueryTextChange(String query) {
+            Log.d("Search", "onQueryTextChange");
+            query = setNullOnEmpty(query);
+            mFilterString = setNullOnEmpty(mFilterString);
+            if (!TextUtils.equals(mFilterString, query)) {
+                mFilterString = query;
+                mNotesAdaptor.updateAsync(mFilterString);
+            }
             return false;
         }
 

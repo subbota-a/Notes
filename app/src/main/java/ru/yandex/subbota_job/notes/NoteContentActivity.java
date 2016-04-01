@@ -32,6 +32,7 @@ import java.io.File;
 public class NoteContentActivity extends AppCompatActivity {
     private String mPath;
     private EditText mEdit;
+    private ActionBar mActionBar;
     private boolean mChanged = false;
     private float mScale = 1;
     private float mDefaultTextSize;
@@ -47,22 +48,21 @@ public class NoteContentActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         assert toolbar != null;
         setSupportActionBar(toolbar);
-        ActionBar actionBar = getSupportActionBar();
-        assert actionBar != null;
-        actionBar.setDisplayHomeAsUpEnabled(true);
-        //actionBar.setCustomView(R.layout.note_title_layout);
-        //actionBar.setDisplayShowCustomEnabled(true);
-        actionBar.setDisplayShowTitleEnabled(false);
-        //mNoteTitle = (EditText)actionBar.getCustomView().findViewById(R.id.title_edit);
+        mActionBar = getSupportActionBar();
+        assert mActionBar != null;
+        mActionBar.setDisplayHomeAsUpEnabled(true);
+        mActionBar.setDisplayShowTitleEnabled(false);
         mNoteTitle = (EditText)findViewById(R.id.title_edit);
         assert mNoteTitle != null;
         mNoteTitle.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
+
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
             }
+
             @Override
             public void afterTextChanged(Editable s) {
                 mChanged = true;
@@ -111,8 +111,7 @@ public class NoteContentActivity extends AppCompatActivity {
         mEdit.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                Log.d("ActionModeCallback", "onCreateActionMode");
-                updateShareProvider();
+                mActionBar.show();
                 return true;
             }
 
@@ -138,6 +137,7 @@ public class NoteContentActivity extends AppCompatActivity {
                     Intent intent = new Intent(Intent.ACTION_SEND);
                     intent.setType(getResources().getString(R.string.noteMimeType));
                     CharSequence s = mEdit.getText().subSequence(mEdit.getSelectionStart(), mEdit.getSelectionEnd());
+                    Log.d("Share", s.toString());
                     intent.putExtra(Intent.EXTRA_TEXT, s.toString());
                     startActivity(intent);
                     return true;
@@ -148,16 +148,6 @@ public class NoteContentActivity extends AppCompatActivity {
             @Override
             public void onDestroyActionMode(ActionMode mode) {
                 Log.d("ActionMode.Callback", "onDestroyActionMode");
-                updateShareProvider();
-            }
-        });
-        mEdit.setOnCreateContextMenuListener(new View.OnCreateContextMenuListener() {
-            @Override
-            public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-                Log.d("onCreateContextMenu", "called");
-                for (int i = 0; i < menu.size(); ++i)
-                    Log.d("ContextMenu", menu.getItem(i).toString());
-                return;
             }
         });
         mScale = getPreferences(Context.MODE_PRIVATE).getFloat(keyScale, 1);

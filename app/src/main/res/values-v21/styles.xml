@@ -2,7 +2,14 @@
 
     <style name="Theme.AppTheme">
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+        <item name="android:statusBarColor">@color/statusBarBackground</item>
+        <item name="android:windowTranslucentStatus">false</item>
+    </style>
+    <style name="ActionBarOverlayTheme" parent="ThemeOverlay.AppCompat.ActionBar">
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:textColorPrimary">@color/actionModeForeground</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:statusBarColor">@color/actionModeStatusBarBackground</item>
     </style>
 
 </resources>

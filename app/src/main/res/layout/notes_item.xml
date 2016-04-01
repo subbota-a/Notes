@@ -4,13 +4,13 @@
     android:layout_height="wrap_content"
     android:gravity="left|center_vertical"
     android:background="@drawable/note_item_background_selector"
-    android:textSize="20sp"
     android:text="@string/filePreviewNotLoaded"
+    android:textAppearance="@style/TextAppearance.AppCompat.Large"
     android:padding="16dp"
     android:layout_margin="8dp"
     android:maxLines="2"
     android:ellipsize="end"
-    android:elevation="4dp"
+    android:elevation="8dp"
     />
 <!--    android:backgroundTint="?android:tint"
 -->

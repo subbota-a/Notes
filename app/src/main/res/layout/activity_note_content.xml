@@ -14,15 +14,15 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:context="ru.yandex.subbota_job.notes.NoteContentActivity"
-        tools:showIn="@layout/activity_note_content"
         android:id="@+id/nestedscrollview">
         <EditText
             android:id="@+id/editor"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:inputType="textMultiLine|text"
-            android:gravity="top|left"
-            android:background="@android:color/transparent">
+            android:gravity="start|top"
+            android:background="@color/colorNoteBackground"
+            >
             <requestFocus />
         </EditText>
     </android.support.v4.widget.NestedScrollView>
@@ -32,7 +32,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         >
-
         <android.support.v7.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
@@ -48,11 +47,10 @@
                 android:nextFocusDown="@id/editor"
                 android:hint="@string/title_activity_note_content"
                 android:imeOptions="flagNavigateNext"
-                android:gravity="left|center_vertical"
+                android:gravity="start|center_vertical"
                 style="@style/ToolbarTitleTextStyle"
                 android:background="@android:color/transparent"
                 />
-
         </android.support.v7.widget.Toolbar>
     </android.support.design.widget.AppBarLayout>
 
