@@ -244,6 +244,7 @@ public class NoteContentActivity extends AppCompatActivity {
                     String path = TextUtils.isEmpty(mPath) ? NewPath() : mPath;
                     String all = UtfFile.Join(params[0], params[1]);
                     UtfFile.Write(path, all);
+                    mPath = path;
                 }catch(Exception e){
                     return e;
                 }
@@ -255,8 +256,10 @@ public class NoteContentActivity extends AppCompatActivity {
                 Toast toast;
                 if (e != null)
                     toast = Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG);
-                else
+                else {
+                    SyncService.OnFileChanged(getApplicationContext(), mPath);
                     toast = Toast.makeText(getApplicationContext(), R.string.noteSaved, Toast.LENGTH_SHORT);
+                }
                 toast.show();
             }
         }.execute(getCustomTitle(),editable.toString());

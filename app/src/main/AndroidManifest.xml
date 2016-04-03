@@ -4,7 +4,10 @@
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:description="@string/permission"/>
+
+    <permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:description="@string/permission" />
 
     <application
         android:allowBackup="true"
@@ -14,8 +17,7 @@
         android:theme="@style/Theme.AppTheme">
         <activity
             android:name=".NotesListActivity"
-            android:label="@string/app_name"
-            >
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -26,13 +28,17 @@
             android:name=".NoteContentActivity"
             android:label="@string/title_activity_note_content"
             android:parentActivityName=".NotesListActivity"
-            android:windowSoftInputMode="adjustResize|stateHidden"
-            >
+            android:windowSoftInputMode="adjustResize|stateHidden">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="ru.yandex.subbota_job.notes.NotesListActivity"/>
-
+                android:value="ru.yandex.subbota_job.notes.NotesListActivity" />
         </activity>
+
+        <service
+            android:name=".SyncService"
+            android:exported="false" />
+
+        <activity android:name=".ConnectionActivity"></activity>
     </application>
 
 </manifest>

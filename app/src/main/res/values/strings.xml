@@ -13,4 +13,6 @@
     <string name="title_action">Изменить название заметки</string>
     <string name="removed_notes_message">Удалено заметок: %d</string>
     <string name="undo">Отменить</string>
+    <string name="connection_failed_title">Синхронизация заметок</string>
+    <string name="connection_failed_text">Что-то не так...</string>
 </resources>

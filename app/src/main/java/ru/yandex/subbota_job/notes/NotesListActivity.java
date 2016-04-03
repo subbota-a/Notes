@@ -38,34 +38,10 @@ public class NotesListActivity extends AppCompatActivity
     FloatingActionButton mNewNote;
     String mFilterString;
     public final static String NotesDirectory = "notes";
-    private GoogleApiClient mGoogleApiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(Drive.API)
-                .addScope(Drive.SCOPE_FILE)
-                .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
-                    @Override
-                    public void onConnected(Bundle bundle) {
-
-                    }
-
-                    @Override
-                    public void onConnectionSuspended(int i) {
-
-                    }
-                })
-                .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
-                    @Override
-                    public void onConnectionFailed(ConnectionResult connectionResult) {
-
-                    }
-                })
-                .build();
-
         setContentView(R.layout.activity_notes_list);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -227,7 +203,7 @@ public class NotesListActivity extends AppCompatActivity
             mSearchView = (android.widget.SearchView) mi.getActionView();
             mSearchView.setQueryHint(getResources().getString(R.string.action_search));
             mSearchView.setSubmitButtonEnabled(false);
-            mSearchView.setIconified(false);
+            mSearchView.setIconified(true);
             mSearchView.setOnCloseListener(this);
             mSearchView.setOnQueryTextListener(this);
         }
@@ -270,7 +246,7 @@ public class NotesListActivity extends AppCompatActivity
                 mFilterString = query;
                 mNotesAdaptor.updateAsync(mFilterString);
             }
-            return false;
+            return true;
         }
 
         @Override

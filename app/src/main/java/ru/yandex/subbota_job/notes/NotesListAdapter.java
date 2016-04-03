@@ -97,7 +97,7 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
         }else
             return context.getApplicationContext().getFilesDir();
     }
-    public void deleteSelectedAsync(View coordinatorLayout) {
+    public void deleteSelectedAsync(final View coordinatorLayout) {
         Integer[] copy = new Integer[mSelected.size()];
         mSelected.toArray(copy);
         mSelected.clear();
@@ -112,22 +112,23 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
         Snackbar snackbar = Snackbar.make(coordinatorLayout, message, Snackbar.LENGTH_LONG);
         snackbar.setAction(R.string.undo, new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-            }
+            public void onClick(View v) {}
         });
         snackbar.setCallback(new Snackbar.Callback() {
             @Override
             public void onDismissed(Snackbar snackbar, int event) {
                 super.onDismissed(snackbar, event);
                 if (event != Snackbar.Callback.DISMISS_EVENT_ACTION) {
-                    new AsyncTask<Void, Void, Void>() {
+                    new AsyncTask<Context, Void, Void>() {
                         @Override
-                        protected Void doInBackground(Void... params) {
-                            for (NoteDescription nd : descr)
+                        protected Void doInBackground(Context... params) {
+                            for (NoteDescription nd : descr) {
                                 nd.mFileName.delete();
+                                SyncService.OnFileChanged(params[0], nd.mFileName.getPath());
+                            }
                             return null;
                         }
-                    }.execute();
+                    }.execute(coordinatorLayout.getContext());
                 } else {
                     updateAsync(mFilterString);
                 }
