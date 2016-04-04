@@ -124,7 +124,7 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                         protected Void doInBackground(Context... params) {
                             for (NoteDescription nd : descr) {
                                 nd.mFileName.delete();
-                                SyncService.OnFileChanged(params[0], nd.mFileName.getPath());
+                                SyncService.onFileChanged(params[0], nd.mFileName.getPath());
                             }
                             return null;
                         }

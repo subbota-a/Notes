@@ -9,7 +9,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.common.GooglePlayServicesUtil;
 
 public class ConnectionActivity extends AppCompatActivity {
     public static final String PENDING_INTENT = "PENDING_INTENT";
@@ -43,7 +42,7 @@ public class ConnectionActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1){
             if (resultCode == RESULT_OK)
-                SyncService.Reconnect();
+                SyncService.restart(this);
             finish();
         }
     }

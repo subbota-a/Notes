@@ -2,7 +2,6 @@ package ru.yandex.subbota_job.notes;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.TypedArray;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -17,7 +16,6 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.ActionMode;
-import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -257,7 +255,7 @@ public class NoteContentActivity extends AppCompatActivity {
                 if (e != null)
                     toast = Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG);
                 else {
-                    SyncService.OnFileChanged(getApplicationContext(), mPath);
+                    SyncService.onFileChanged(getApplicationContext(), mPath);
                     toast = Toast.makeText(getApplicationContext(), R.string.noteSaved, Toast.LENGTH_SHORT);
                 }
                 toast.show();

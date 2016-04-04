@@ -15,4 +15,6 @@
     <string name="undo">Отменить</string>
     <string name="connection_failed_title">Синхронизация заметок</string>
     <string name="connection_failed_text">Что-то не так...</string>
+    <string name="google_drive_folder">NotesBackup</string>
+    <string name="operation_failed_title">Синхронизация заметок</string>
 </resources>
