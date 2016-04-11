@@ -216,7 +216,7 @@ public class SyncService extends Service {
             checkStatus(bufferResult.getStatus());
             MetadataBuffer buf = bufferResult.getMetadataBuffer();
             if (buf.getCount()>0)
-                return bufferResult.getMetadataBuffer().get(0).getDriveId().asDriveFile();
+                return buf.get(0).getDriveId().asDriveFile();
             return null;
         }
 
