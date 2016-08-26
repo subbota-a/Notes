@@ -1,5 +1,6 @@
 package ru.yandex.subbota_job.notes;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -17,11 +18,12 @@ import android.util.Pair;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.Status;
+import com.google.android.gms.common.api.Releasable;
 import com.google.android.gms.drive.Drive;
 import com.google.android.gms.drive.DriveApi;
 import com.google.android.gms.drive.DriveFile;
 import com.google.android.gms.drive.DriveFolder;
+import com.google.android.gms.drive.Metadata;
 import com.google.android.gms.drive.MetadataBuffer;
 import com.google.android.gms.drive.MetadataChangeSet;
 import com.google.android.gms.drive.query.Filters;
@@ -30,18 +32,23 @@ import com.google.android.gms.drive.query.SearchableField;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class SyncService extends Service {
-    private static final int SyncAll = 1;
+    //private static final int SyncAll = 1;
     private static final int OnFileChanged = 2;
     private static final int OnContinue = 3;
     private static final int Quit = 4;
     private static final String COMMAND = "COMMAND";
+    private static final String SyncAllKey = "SyncAll";
     private Handler mHandler;
 
     public SyncService() {
@@ -52,7 +59,7 @@ public class SyncService extends Service {
     }
 
     public static void onFileChanged(Context context, String path) {
-        Log.d("SyncService", "onFileChanged");
+        Log.d("SyncService", "OnFileChanged");
         Intent intent = new Intent(context, SyncService.class);
         intent.setData(Uri.fromFile(new File(path)));
         intent.putExtra(COMMAND, OnFileChanged);
@@ -60,15 +67,28 @@ public class SyncService extends Service {
     }
 
     public static void restart(Context context) {
-        Log.d("SyncService", "onFileChanged");
+        Log.d("SyncService", "OnContinue");
         Intent intent = new Intent(context, SyncService.class);
         intent.putExtra(COMMAND, OnContinue);
         context.startService(intent);
     }
 
+    public static void syncAll(Context context) {
+        Log.d("SyncService", "SyncAll");
+        setSyncAll(context, true);
+        restart(context);
+    }
 
-
-
+    private static boolean getSyncAll(Context context){
+        return context.getSharedPreferences("ru.yandex.subbota_job.notes", Context.MODE_PRIVATE)
+                .getBoolean(SyncAllKey, false);
+    }
+    private static void setSyncAll(Context context, boolean syncAll){
+        context.getSharedPreferences("ru.yandex.subbota_job.notes", Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(SyncAllKey, syncAll)
+                .commit();
+    }
     @Override
     public void onCreate() {
         Log.d("SyncService", "onCreate");
@@ -80,20 +100,16 @@ public class SyncService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("SyncService", "onStartCommand");
-        int command = SyncAll;
+        int command = OnContinue;
         String path = null;
         if (intent != null) {
-            command = intent.getIntExtra(COMMAND, SyncAll);
+            command = intent.getIntExtra(COMMAND, OnContinue);
             Uri uri = intent.getData();
             if (uri!=null)
                 path = uri.getPath();
         }
         mHandler.sendMessage(Message.obtain(mHandler, command, startId, 0, path));
         return START_STICKY;
-    }
-
-    private void sync(int startId) {
-        stopSelf(startId);
     }
 
     @Override
@@ -123,14 +139,20 @@ public class SyncService extends Service {
                     return true;
                 case OnContinue:
                     onResolved();
+                    mContext.stopSelf(msg.arg1);
                     return true;
                 case Quit:
+                    if (!mUpdatedFiles.isEmpty())
+                        setSyncAll(mContext, true);
                     mClient.disconnect();
                     ((HandlerThread)Thread.currentThread()).quit();
                     return true;
+                default:
+                    mContext.stopSelf(msg.arg1);
             }
             return false;
         }
+
         private void addFile(Pair<String, Integer> obj) {
             mUpdatedFiles.add(obj);
             if (mResolvePending)
@@ -142,9 +164,11 @@ public class SyncService extends Service {
             if (mClient.isConnected())
                 return true;
             mResolvePending = false;
+            Log.d("SyncService", "trying connect...");
             ConnectionResult result = mClient.blockingConnect();
             if (result.isSuccess())
                 return true;
+            Log.d("SyncService", GoogleApiAvailability.getInstance().getErrorString(result.getErrorCode()));
             makeNotification(result.getResolution(), result.getErrorCode()
                     , mContext.getString(R.string.connection_failed_title)
                     , GoogleApiAvailability.getInstance().getErrorString(result.getErrorCode()));
@@ -154,42 +178,58 @@ public class SyncService extends Service {
         private void onResolved() {
             if (!connect())
                 return;
+
+            Log.d("SyncService", "Connected");
+            boolean isSyncAll = getSyncAll(mContext);
+            if (isSyncAll){
+                if (!syncAll())
+                    return;
+            }
             for(Pair<String, Integer> p = mUpdatedFiles.peek(); p!=null; p = mUpdatedFiles.peek())
             {
-                if (!updateFile(p.first))
+                if (!(isSyncAll || uploadFile(p.first)))
                     return;
                 mUpdatedFiles.remove();
                 mContext.stopSelf(p.second);
+                Log.d("SyncService", String.format("stopSelf(%d)", p.second));
             }
         }
-        private boolean updateFile(String path) {
+
+        private boolean syncAll() {
+            DriveApi.MetadataBufferResult bufferResult = null;
+            Holder<DriveFolder> folder = null;
             try {
-                DriveFolder folder = getFolder();
-                File f = new File(path);
-                DriveFile driveFile = searchFile(folder, f.getName());
-                if (f.exists())
-                {
-                    DriveApi.DriveContentsResult contentsResult = null;
-                    if (driveFile != null) {
-                        contentsResult = driveFile.open(mClient, DriveFile.MODE_WRITE_ONLY, null).await();
-                    }else{
-                        contentsResult = Drive.DriveApi.newDriveContents(mClient).await();
-                    }
-                    checkStatus(contentsResult.getStatus());
-                    copyContents(new FileInputStream(f), contentsResult.getDriveContents().getOutputStream());
-                    MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
-                            .setTitle(f.getName())
-                            .setMimeType(mContext.getString(R.string.noteMimeType))
-                            .build();
-                    if (driveFile != null){
-                        checkStatus(contentsResult.getDriveContents().commit(mClient, null).await());
-                    }else {
-                        DriveFolder.DriveFileResult t = folder.createFile(mClient, changeSet, contentsResult.getDriveContents()).await();
-                        checkStatus(t.getStatus());
-                    }
-                }else if (driveFile != null) {
-                    driveFile.delete(mClient).await();
+                Log.d("SyncService", "syncAll");
+                File dir = NotesListAdapter.getOrAddDirectory(mContext);
+                if (dir == null)
+                    return false;
+                Map<String, File> localFiles = new HashMap<String, File>();
+                for (File f : dir.listFiles()) {
+                    localFiles.put(f.getName(), f);
                 }
+                folder = getFolder();
+                Query query = new Query.Builder()
+                        .addFilter(Filters.eq(SearchableField.MIME_TYPE, mContext.getString(R.string.noteMimeType)))
+                        .build();
+                bufferResult = folder.get().queryChildren(mClient, query).await();
+                checkStatus(bufferResult.getStatus());
+                MetadataBuffer buf = bufferResult.getMetadataBuffer();
+                for (int i = 0; i < buf.getCount(); ++i) {
+                    Metadata remoteFile = buf.get(i);
+                    File localFile = localFiles.get(remoteFile.getTitle());
+                    if (localFile != null) {
+                        if (remoteFile.getModifiedDate().getTime() < localFile.lastModified())
+                            uploadFile(folder.get(), localFile, remoteFile.getDriveId().asDriveFile());
+                        else if (remoteFile.getModifiedDate().getTime() < localFile.lastModified())
+                            downloadFile(dir, remoteFile);
+                        localFiles.remove(remoteFile.getTitle());
+                    } else {
+                        downloadFile(dir, remoteFile);
+                    }
+                }
+                for (File localFile : localFiles.values())
+                    uploadFile(localFile.getPath());
+                setSyncAll(mContext, false);
                 return true;
             }catch(MyError e){
                 makeNotification(e.mStatus.getResolution(), e.mStatus.getStatusCode(), mContext.getString(R.string.operation_failed_title), e.mStatus.getStatusMessage());
@@ -198,6 +238,71 @@ public class SyncService extends Service {
                 return false;
             }catch(IOException e){
                 return true;
+            }finally {
+                if (bufferResult != null)
+                    bufferResult.release();
+                if (folder != null)
+                    folder.release();
+            }
+        }
+
+        private void downloadFile(File dir, Metadata remoteFile) throws IOException {
+            Log.d("SyncService", "downloadFile "+remoteFile.getTitle());
+            DriveApi.DriveContentsResult contentsResult = remoteFile.getDriveId().asDriveFile()
+                    .open(mClient, DriveFile.MODE_READ_ONLY, null).await();
+            checkStatus(contentsResult.getStatus());
+            InputStream inputStream = contentsResult.getDriveContents().getInputStream();
+            File dest = new File(dir, remoteFile.getTitle());
+            OutputStream outputStream = new FileOutputStream(dest);
+            copyContents(inputStream, outputStream);
+            outputStream.close();
+        }
+
+        private void uploadFile(DriveFolder folder, File localFile, DriveFile driveFile) throws IOException
+        {
+            Log.d("SyncService", "uploadFile "+localFile.getName());
+            if (localFile.exists())
+            {
+                DriveApi.DriveContentsResult contentsResult = null;
+                if (driveFile != null) {
+                    contentsResult = driveFile.open(mClient, DriveFile.MODE_WRITE_ONLY, null).await();
+                }else{
+                    contentsResult = Drive.DriveApi.newDriveContents(mClient).await();
+                }
+                checkStatus(contentsResult.getStatus());
+                copyContents(new FileInputStream(localFile), contentsResult.getDriveContents().getOutputStream());
+                MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
+                        .setTitle(localFile.getName())
+                        .setMimeType(mContext.getString(R.string.noteMimeType))
+                        .build();
+                if (driveFile != null){
+                    checkStatus(contentsResult.getDriveContents().commit(mClient, null).await());
+                }else {
+                    DriveFolder.DriveFileResult t = folder.createFile(mClient, changeSet, contentsResult.getDriveContents()).await();
+                    checkStatus(t.getStatus());
+                }
+            }else if (driveFile != null) {
+                driveFile.delete(mClient).await();
+            }
+        }
+        private boolean uploadFile(String path) {
+            Holder<DriveFolder> folder = null;
+            try {
+                folder = getFolder();
+                File f = new File(path);
+                DriveFile driveFile = searchFile(folder.get(), f.getName());
+                uploadFile(folder.get(), f, driveFile);
+                return true;
+            }catch(MyError e){
+                makeNotification(e.mStatus.getResolution(), e.mStatus.getStatusCode(), mContext.getString(R.string.operation_failed_title), e.mStatus.getStatusMessage());
+                mResolvePending = true;
+                mClient.disconnect();
+                return false;
+            }catch(IOException e){
+                return true;
+            }finally {
+                if (folder != null)
+                    folder.release();
             }
         }
 
@@ -215,12 +320,27 @@ public class SyncService extends Service {
             DriveApi.MetadataBufferResult bufferResult = folder.queryChildren(mClient, query).await();
             checkStatus(bufferResult.getStatus());
             MetadataBuffer buf = bufferResult.getMetadataBuffer();
-            if (buf.getCount()>0)
+            if (buf.getCount() > 0)
                 return buf.get(0).getDriveId().asDriveFile();
             return null;
         }
 
-        private DriveFolder getFolder()
+        private static class Holder<T> implements Releasable {
+            private final Releasable mReleasable;
+            private final T mObj;
+            public Holder(Releasable releasable, T obj){
+                mReleasable = releasable;
+                mObj = obj;
+            }
+
+            public T get(){ return mObj; }
+            @Override
+            public void release() {
+                if (mReleasable != null)
+                    mReleasable.release();
+            }
+        }
+        private Holder<DriveFolder> getFolder()
         {
             String folderName = mContext.getString(R.string.google_drive_folder);
             {// search one
@@ -233,7 +353,7 @@ public class SyncService extends Service {
                 MetadataBuffer buf = result.getMetadataBuffer();
                 for(int i=0; i<buf.getCount(); ++i)
                     if (buf.get(i).isFolder())
-                        return result.getMetadataBuffer().get(i).getDriveId().asDriveFolder();
+                        return new Holder(result, result.getMetadataBuffer().get(i).getDriveId().asDriveFolder());
             }
             {// create one
                 MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
@@ -241,7 +361,7 @@ public class SyncService extends Service {
                         .build();
                 DriveFolder.DriveFolderResult result = Drive.DriveApi.getRootFolder(mClient).createFolder(mClient, changeSet).await();
                 checkStatus(result.getStatus());
-                return result.getDriveFolder();
+                return new Holder(null, result.getDriveFolder());
             }
         }
 
@@ -255,6 +375,7 @@ public class SyncService extends Service {
             PendingIntent pendingIntent = PendingIntent.getActivity(mContext, 0, intent, 0);
             NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext);
             builder.setSmallIcon(R.drawable.ic_warning_24dp);
+            builder.setCategory(Notification.CATEGORY_ERROR);
             builder.setContentTitle(notifyTitle);
             builder.setContentText(notifyText);
             builder.setContentIntent(pendingIntent);

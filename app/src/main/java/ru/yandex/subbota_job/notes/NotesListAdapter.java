@@ -163,7 +163,8 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                     // make recent first
                     @Override
                     public int compare(File lhs, File rhs) {
-                        return (int)(rhs.lastModified()-lhs.lastModified());
+                        long dif = rhs.lastModified()-lhs.lastModified();
+                        return dif < 0 ? -1 : dif > 0 ? 1 : 0;
                     }
                 });
                 for(File f: files){

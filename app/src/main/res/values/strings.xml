@@ -3,7 +3,7 @@
     <string name="action_select">Выбрать</string>
     <string name="action_search">Поиск</string>
     <string name="filePreviewNotLoaded">Загружается...</string>
-    <string name="title_activity_note_content">Заметка</string>
+    <string name="title_activity_note_content">Место для заголовка</string>
     <string name="noteMimeType">text/plain</string>
     <string name="noteSaved">Заметка сохранена</string>
     <string name="share">Поделиться</string>
@@ -17,4 +17,5 @@
     <string name="connection_failed_text">Что-то не так...</string>
     <string name="google_drive_folder">NotesBackup</string>
     <string name="operation_failed_title">Синхронизация заметок</string>
+    <string name="note_hint">Текст заметки</string>
 </resources>

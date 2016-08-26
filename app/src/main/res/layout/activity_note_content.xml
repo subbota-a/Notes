@@ -15,17 +15,24 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:context="ru.yandex.subbota_job.notes.NoteContentActivity"
         android:id="@+id/nestedscrollview">
-        <EditText
-            android:id="@+id/editor"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:inputType="textMultiLine|text"
-            android:nestedScrollingEnabled="true"
-            android:gravity="start|top"
-            android:background="@color/colorNoteBackground"
-            >
-            <requestFocus />
-        </EditText>
+            android:layout_gravity="fill">
+            <EditText
+                android:id="@+id/editor"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:inputType="textMultiLine|text"
+                android:gravity="start|top"
+                android:layout_margin="5dp"
+                android:minLines="5"
+                android:hint="@string/note_hint"
+                android:background="@android:color/transparent"
+                >
+                <requestFocus />
+            </EditText>
+        </FrameLayout>
     </android.support.v4.widget.NestedScrollView>
 
     <android.support.design.widget.AppBarLayout

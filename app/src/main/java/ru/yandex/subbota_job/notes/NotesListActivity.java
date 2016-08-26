@@ -187,6 +187,10 @@ public class NotesListActivity extends AppCompatActivity
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_sync) {
+            SyncService.syncAll(getApplicationContext());
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
 

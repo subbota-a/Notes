@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.google.android.gms.common.GoogleApiAvailability;
 
@@ -18,6 +19,7 @@ public class ConnectionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Intent intent = getIntent();
         if (intent == null) {
+            Log.d("ConnectionActivity", "intent==null");
             finish();
             return;
         }
@@ -27,6 +29,7 @@ public class ConnectionActivity extends AppCompatActivity {
         int errCode = intent.getIntExtra(CONNECTION_ERROR, 0);
         if (pendingIntent != null)
             try {
+                Log.d("ConnectionActivity", "startIntentSenderForResult");
                 startIntentSenderForResult(pendingIntent.getIntentSender(), 1, (Intent)null, 0, 0, 0);
             } catch (IntentSender.SendIntentException e) {
                 e.printStackTrace();
@@ -40,6 +43,7 @@ public class ConnectionActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        Log.d("ConnectionActivity", String.format("onActivityResult: requestCode=%d, resultCode=%d", requestCode, resultCode));
         if (requestCode == 1){
             if (resultCode == RESULT_OK)
                 SyncService.restart(this);

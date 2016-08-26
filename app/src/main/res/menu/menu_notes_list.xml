@@ -9,4 +9,8 @@
         app:showAsAction="collapseActionView|always"
         app:actionViewClass="android.widget.SearchView"
         />
+    <item android:id="@+id/action_sync"
+        android:title="Синхронизировать"
+        android:icon="@drawable/ic_sync_24dp"
+        />
 </menu>

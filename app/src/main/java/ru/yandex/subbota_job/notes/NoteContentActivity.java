@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -16,6 +17,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.ActionMode;
+import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -37,6 +39,7 @@ public class NoteContentActivity extends AppCompatActivity {
     private ScaleGestureDetector mGesture;
     private ShareActionProvider mShareProvider;
     private EditText mNoteTitle;
+    private boolean mLoading = false;
     static final String keyPath = NoteContentActivity.class.getName() + "path";
     static final String keyScale = "scale";
 
@@ -52,20 +55,6 @@ public class NoteContentActivity extends AppCompatActivity {
         mActionBar.setDisplayShowTitleEnabled(false);
         mNoteTitle = (EditText)findViewById(R.id.title_edit);
         assert mNoteTitle != null;
-        mNoteTitle.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                mChanged = true;
-            }
-        });
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -91,21 +80,6 @@ public class NoteContentActivity extends AppCompatActivity {
         Log.d(toString(), "initEdit");
         mEdit = (EditText)findViewById(R.id.editor);
         assert mEdit != null;
-        mEdit.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                updateShareProvider();
-                mChanged = true;
-            }
-        });
         mEdit.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
@@ -192,6 +166,44 @@ public class NoteContentActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        mNoteTitle.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (mLoading)
+                    return;
+                mChanged = true;
+            }
+        });
+        mEdit.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (mLoading)
+                    return;
+                updateShareProvider();
+                mChanged = true;
+            }
+        });
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         if (mPath != null && !mPath.isEmpty())
@@ -215,7 +227,6 @@ public class NoteContentActivity extends AppCompatActivity {
                 intent.putExtra(Intent.EXTRA_TEXT, mEdit.getText().subSequence(mEdit.getSelectionStart(),mEdit.getSelectionEnd()).toString());
             else
                 intent.putExtra(Intent.EXTRA_TEXT, mEdit.getText().toString());
-            Log.d("mShareProvider", intent.getStringExtra(Intent.EXTRA_TEXT));
             mShareProvider.setShareIntent(intent);
         }
     }
@@ -225,10 +236,6 @@ public class NoteContentActivity extends AppCompatActivity {
         mShareProvider = (ShareActionProvider)MenuItemCompat.getActionProvider(menu.findItem(R.id.share_action));
         updateShareProvider();
         return true;
-    }
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        return super.onOptionsItemSelected(item);
     }
 
     private void saveContentAsync() {
@@ -269,6 +276,7 @@ public class NoteContentActivity extends AppCompatActivity {
     }
 
     private void LoadContentAsync(String path) {
+        mLoading = true;
         new AsyncTask<String, Void, String[]>() {
             @Override
             protected String[] doInBackground(String... params) {
@@ -286,10 +294,12 @@ public class NoteContentActivity extends AppCompatActivity {
             @Override
             protected void onPostExecute(String[] s) {
                 if (s != null) {
+                    Log.d("LoadContentAsync","mEdit.setText");
                     mEdit.setText(s[1]);
                     mNoteTitle.setText(s[0]);
-                    mChanged = false;
                 }
+                mChanged = false;
+                mLoading = false;
             }
         }.execute(path);
     }
