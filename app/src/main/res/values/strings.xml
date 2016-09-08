@@ -18,4 +18,6 @@
     <string name="google_drive_folder">NotesBackup</string>
     <string name="operation_failed_title">Синхронизация заметок</string>
     <string name="note_hint">Текст заметки</string>
+    <string name="action_clear">Очистить</string>
+    <string name="action_undo">Вернуть</string>
 </resources>

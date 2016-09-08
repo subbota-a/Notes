@@ -17,7 +17,6 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.ActionMode;
-import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -58,7 +57,7 @@ public class NoteContentActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                NoteContentActivity.this.finish();
+                saveAndExit();
             }
         });
         initEdit();
@@ -74,6 +73,19 @@ public class NoteContentActivity extends AppCompatActivity {
             else// force show keyboard only for new note
                 getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        saveAndExit();
+    }
+
+    private void saveAndExit()
+    {
+        if (mChanged)
+            saveContent();
+        finish();
+        overridePendingTransition(R.anim.go_into_from_left, R.anim.go_away_to_right);
     }
 
     private void initEdit() {
@@ -142,6 +154,24 @@ public class NoteContentActivity extends AppCompatActivity {
             public void onScaleEnd(ScaleGestureDetector detector) {
             }
         });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()){
+            case R.id.clear_action:
+                mEdit.setText(null);
+                mChanged = false;
+                return true;
+            case R.id.undo_action:
+                if (TextUtils.isEmpty(mPath))
+                    mEdit.setText(null);
+                else
+                    LoadContentAsync(mPath);
+                mChanged = false;
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -214,8 +244,6 @@ public class NoteContentActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         getPreferences(Context.MODE_PRIVATE).edit().putFloat(keyScale, mScale).commit();
-        if (mChanged)
-            saveContentAsync();
     }
 
     private void updateShareProvider()
@@ -238,37 +266,21 @@ public class NoteContentActivity extends AppCompatActivity {
         return true;
     }
 
-    private void saveContentAsync() {
+    private void saveContent() {
         Editable editable = mEdit.getText();
         if (editable.length() == 0 && TextUtils.isEmpty(mPath))
             return;
-        new AsyncTask<String, Void, Exception>() {
-            @Override
-            protected Exception doInBackground(String... params) {
-                try {
-                    String path = TextUtils.isEmpty(mPath) ? NewPath() : mPath;
-                    String all = UtfFile.Join(params[0], params[1]);
-                    UtfFile.Write(path, all);
-                    mPath = path;
-                }catch(Exception e){
-                    return e;
-                }
-                return null;
-            }
-
-            @Override
-            protected void onPostExecute(Exception e) {
-                Toast toast;
-                if (e != null)
-                    toast = Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG);
-                else {
-                    SyncService.onFileChanged(getApplicationContext(), mPath);
-                    toast = Toast.makeText(getApplicationContext(), R.string.noteSaved, Toast.LENGTH_SHORT);
-                }
-                toast.show();
-            }
-        }.execute(getCustomTitle(),editable.toString());
-        mChanged = false;
+        try {
+            String path = TextUtils.isEmpty(mPath) ? NewPath() : mPath;
+            String all = UtfFile.Join(getCustomTitle(), editable.toString());
+            UtfFile.Write(path, all);
+            mPath = path;
+            SyncService.onFileChanged(getApplicationContext(), mPath);
+            Toast.makeText(getApplicationContext(), R.string.noteSaved, Toast.LENGTH_SHORT).show();
+            mChanged = false;
+        }catch(Exception e){
+            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private String getCustomTitle() {

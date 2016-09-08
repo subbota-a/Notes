@@ -9,4 +9,13 @@
         android:icon="?attr/actionModeShareDrawable"
         app:showAsAction="never"
         app:actionProviderClass="android.support.v7.widget.ShareActionProvider"/>
+    <item
+        android:id="@+id/clear_action"
+        android:title="@string/action_clear"
+        android:icon="@drawable/ic_delete_24dp"
+        app:showAsAction="never"/>
+    <item
+        android:id="@+id/undo_action"
+        android:title="@string/action_undo"
+        android:icon="@drawable/ic_undo_black_24dp"/>
 </menu>

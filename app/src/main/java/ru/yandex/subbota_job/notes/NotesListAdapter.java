@@ -3,6 +3,8 @@ package ru.yandex.subbota_job.notes;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.FileObserver;
+import android.os.Handler;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -27,7 +29,8 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
     private Set<Integer> mSelected;
     private AsyncTask<String, NoteDescription, Void> mLoaderTask;
     private String mFilterString;
-
+    private FileObserver mFileObserver;
+    private Handler mUpdateAsync = new Handler();
 
     static class ViewHolder extends RecyclerView.ViewHolder{
         public static ViewHolder create(ViewGroup parent)
@@ -49,6 +52,21 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
     {
         mContext = context;
         mSelected = new HashSet<Integer>();
+        File dir = getOrAddDirectory(context);
+        if (dir != null) {
+            mFileObserver = new FileObserver(dir.getPath(), FileObserver.DELETE|FileObserver.MODIFY) {
+                @Override
+                public void onEvent(int i, String s) {
+                    mUpdateAsync.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateAsync(mFilterString);
+                        }
+                    });
+                }
+            };
+            mFileObserver.startWatching();
+        }
     }
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {

@@ -66,6 +66,11 @@ public class NotesListActivity extends AppCompatActivity
                 createNewNote();
             }
         });
+
+        if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")){
+            ActivityCompat.requestPermissions(this, new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"}, 0);
+        }else
+            mNotesAdaptor.updateAsync(mFilterString);
     }
 
     class GestureController extends GestureDetector.SimpleOnGestureListener implements ActionMode.Callback{
@@ -148,24 +153,24 @@ public class NotesListActivity extends AppCompatActivity
         }
     }
 
+    private void startActivityWithTransition(Intent intent){
+        startActivityForResult(intent, 0);
+        overridePendingTransition(R.anim.go_into_from_right, R.anim.go_away_to_left);
+    }
     private void editNote(NoteDescription item) {
         Intent intent = new Intent(this, NoteContentActivity.class);
         intent.setData(Uri.fromFile(item.mFileName));
-        startActivityForResult(intent, 0);
+        startActivityWithTransition(intent);
     }
 
     private void createNewNote() {
         Intent intent = new Intent(this, NoteContentActivity.class);
-        startActivityForResult(intent, 0);
+        startActivityWithTransition(intent);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")){
-            ActivityCompat.requestPermissions(this, new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"}, 0);
-        }else
-            mNotesAdaptor.updateAsync(mFilterString);
     }
 
     @Override
