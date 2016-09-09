@@ -40,6 +40,7 @@ public class NoteContentActivity extends AppCompatActivity {
     private EditText mNoteTitle;
     private boolean mLoading = false;
     static final String keyPath = NoteContentActivity.class.getName() + "path";
+    static final String keyChanged = NoteContentActivity.class.getName() + "changed";
     static final String keyScale = "scale";
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +65,7 @@ public class NoteContentActivity extends AppCompatActivity {
 
         if (savedInstanceState != null){
             mPath = savedInstanceState.getString(keyPath);
+            mChanged = savedInstanceState.getBoolean(keyChanged);
         }else {
             Intent intent = getIntent();
             assert intent != null;
@@ -73,6 +75,14 @@ public class NoteContentActivity extends AppCompatActivity {
             else// force show keyboard only for new note
                 getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        //if (mPath != null && !mPath.isEmpty())
+        outState.putString(keyPath, mPath);
+        outState.putBoolean(keyChanged, mChanged);
     }
 
     @Override
@@ -231,13 +241,6 @@ public class NoteContentActivity extends AppCompatActivity {
                 mChanged = true;
             }
         });
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        if (mPath != null && !mPath.isEmpty())
-            outState.putString(keyPath, mPath);
     }
 
     @Override
