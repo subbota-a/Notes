@@ -1,39 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     tools:context="ru.yandex.subbota_job.notes.NoteContentActivity">
-
-    <android.support.v4.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:context="ru.yandex.subbota_job.notes.NoteContentActivity"
-        android:id="@+id/nestedscrollview">
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="fill">
-            <EditText
-                android:id="@+id/editor"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:inputType="textMultiLine|text"
-                android:gravity="start|top"
-                android:layout_margin="5dp"
-                android:minLines="5"
-                android:hint="@string/note_hint"
-                android:background="@android:color/transparent"
-                >
-                <requestFocus />
-            </EditText>
-        </FrameLayout>
-    </android.support.v4.widget.NestedScrollView>
 
     <android.support.design.widget.AppBarLayout
         android:id="@+id/app_bar"
@@ -52,7 +25,6 @@
                 android:id="@+id/title_edit"
                 android:inputType="textNoSuggestions|text"
                 android:singleLine="true"
-                android:nextFocusDown="@id/editor"
                 android:hint="@string/title_activity_note_content"
                 android:imeOptions="flagNavigateNext"
                 android:gravity="start|center_vertical"
@@ -62,5 +34,17 @@
         </android.support.v7.widget.Toolbar>
     </android.support.design.widget.AppBarLayout>
 
-
-</android.support.design.widget.CoordinatorLayout>
+    <EditText
+        android:id="@+id/editor"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:inputType="textMultiLine|text"
+        android:gravity="start|top"
+        android:layout_margin="5dp"
+        android:minLines="5"
+        android:hint="@string/note_hint"
+        android:background="@android:color/transparent"
+        >
+        <requestFocus />
+    </EditText>
+</LinearLayout>

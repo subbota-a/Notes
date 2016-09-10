@@ -55,6 +55,7 @@ public class NoteContentActivity extends AppCompatActivity {
         mActionBar.setDisplayShowTitleEnabled(false);
         mNoteTitle = (EditText)findViewById(R.id.title_edit);
         assert mNoteTitle != null;
+        mNoteTitle.setNextFocusDownId(R.id.editor);
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
