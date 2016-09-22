@@ -5,11 +5,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v4.view.WindowCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.ActionMode;
@@ -67,10 +70,12 @@ public class NotesListActivity extends AppCompatActivity
             }
         });
 
+        mNotesAdaptor.beginUpdate();
         if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")){
             ActivityCompat.requestPermissions(this, new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"}, 0);
-        }else
+        }else {
             mNotesAdaptor.updateAsync(mFilterString);
+        }
     }
 
     class GestureController extends GestureDetector.SimpleOnGestureListener implements ActionMode.Callback{
@@ -93,7 +98,7 @@ public class NotesListActivity extends AppCompatActivity
             if (isSelectionMode())
                 toggleSelection(position);
             else
-                editNote(mNotesAdaptor.getItem(position));
+                editNote(position);
             return true;
         }
 
@@ -153,24 +158,39 @@ public class NotesListActivity extends AppCompatActivity
         }
     }
 
-    private void startActivityWithTransition(Intent intent){
-        startActivityForResult(intent, 0);
-        overridePendingTransition(R.anim.go_into_from_right, R.anim.go_away_to_left);
-    }
-    private void editNote(NoteDescription item) {
+    private void editNote(int position) {
+        NoteDescription item = mNotesAdaptor.getItem(position);
         Intent intent = new Intent(this, NoteContentActivity.class);
         intent.setData(Uri.fromFile(item.mFileName));
-        startActivityWithTransition(intent);
+        ActivityOptionsCompat options;
+        if (Build.VERSION.SDK_INT >= 21 ) {
+            View view = mList.getChildAt(position);
+            view = view.findViewById(android.R.id.text1);
+            options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, view, "title");
+        }else
+            options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left);
+        startActivityForResult(intent, 0,options.toBundle());
     }
 
     private void createNewNote() {
         Intent intent = new Intent(this, NoteContentActivity.class);
-        startActivityWithTransition(intent);
+        ActivityOptionsCompat options;
+        options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left);
+        startActivityForResult(intent, 0, options.toBundle());
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
+    protected void onResume() {
+        Log.d("NodesListActivity", "onResume");
+        super.onResume();
+        mNotesAdaptor.endUpdate();
+    }
+
+    @Override
+    protected void onPause() {
+        Log.d("NodesListActivity", "onStop");
+        super.onPause();
+        mNotesAdaptor.beginUpdate();
     }
 
     @Override

@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,10 +28,24 @@ import java.util.Set;
 public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.ViewHolder> {
     private final Context mContext;
     private Set<Integer> mSelected;
-    private AsyncTask<String, NoteDescription, Void> mLoaderTask;
+    private AsyncTask<String, Void, ArrayList<NoteDescription>> mLoaderTask;
     private String mFilterString;
     private FileObserver mFileObserver;
     private Handler mUpdateAsync = new Handler();
+    private boolean mUpdatePending = false;
+
+    private int mLockUpdate = 0;
+
+    public void beginUpdate(){
+        ++mLockUpdate;
+    }
+
+    public void endUpdate(){
+        if (--mLockUpdate == 0 && mUpdatePending)
+            updateAsync(mFilterString);
+    }
+
+
 
     static class ViewHolder extends RecyclerView.ViewHolder{
         public static ViewHolder create(ViewGroup parent)
@@ -39,11 +54,13 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                     LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.notes_item, parent, false));
         }
+        private TextView mItem;
         public ViewHolder(View itemView) {
             super(itemView);
+            mItem = (TextView)itemView.findViewById(android.R.id.text1);
         }
         public void setText(String text){
-            ((TextView)itemView).setText(text);
+            mItem.setText(text);
         }
         public void setSelected(boolean selected){ itemView.setSelected(selected);}
     }
@@ -163,15 +180,18 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
     public void updateAsync(String substring)
     {
         mFilterString = substring;
+        mUpdatePending = true;
+        if (mLockUpdate > 0)
+            return;
+        mUpdatePending = false;
         if (mLoaderTask != null){
             mLoaderTask.cancel(false);
             mLoaderTask = null;
         }
-        mDataSource.clear();
-        notifyDataSetChanged();
-        mLoaderTask = new AsyncTask<String, NoteDescription, Void>() {
+        mLoaderTask = new AsyncTask<String, Void, ArrayList<NoteDescription>>() {
             @Override
-            protected Void doInBackground(String... params) {
+            protected ArrayList<NoteDescription> doInBackground(String... params) {
+                ArrayList<NoteDescription> ret = new ArrayList<NoteDescription>();
                 String filterString = TextUtils.isEmpty(params[0]) ? null : params[0].toLowerCase();
                 File file = getOrAddDirectory(mContext);
                 if (file == null)
@@ -202,20 +222,22 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                             String[] pair = UtfFile.Split(content);
                             item.mPreviewText = pair[0]==null ? UtfFile.getLine(pair[1]) : pair[0];
                             item.mFileName = f;
-                            publishProgress(item);
+                            ret.add(item);
                         }
                     }catch(IOException e) {
                     }
                 }
-                return null;
+                return ret;
             }
             @Override
-            protected void onProgressUpdate(NoteDescription... values) {
-                if (isCancelled())
-                    return;
-                mDataSource.add(values[0]);
-                notifyItemInserted(mDataSource.size()-1);
+            protected void onPostExecute(ArrayList<NoteDescription> noteDescriptions) {
+                mergeTo(noteDescriptions);
             }
         }.execute(substring);
+    }
+
+    private void mergeTo(ArrayList<NoteDescription> newDataSource) {
+        mDataSource = newDataSource;
+        notifyDataSetChanged();
     }
 }

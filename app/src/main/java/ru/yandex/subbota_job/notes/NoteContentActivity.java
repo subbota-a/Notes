@@ -7,6 +7,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v4.view.ViewCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.ShareActionProvider;
@@ -39,6 +40,7 @@ public class NoteContentActivity extends AppCompatActivity {
     private ShareActionProvider mShareProvider;
     private EditText mNoteTitle;
     private boolean mLoading = false;
+    private boolean mRestarted = false;
     static final String keyPath = NoteContentActivity.class.getName() + "path";
     static final String keyChanged = NoteContentActivity.class.getName() + "changed";
     static final String keyScale = "scale";
@@ -64,16 +66,19 @@ public class NoteContentActivity extends AppCompatActivity {
         });
         initEdit();
 
+        ViewCompat.setTransitionName(mNoteTitle, "title");
+        ViewCompat.setTransitionName(mEdit, "editor");
         if (savedInstanceState != null){
             mPath = savedInstanceState.getString(keyPath);
             mChanged = savedInstanceState.getBoolean(keyChanged);
+            mRestarted = true;
         }else {
             Intent intent = getIntent();
             assert intent != null;
             Uri uri = intent.getData();
-            if (uri != null)
+            if (uri != null) {
                 LoadContentAsync(uri.getPath());
-            else// force show keyboard only for new note
+            }else// force show keyboard only for new note
                 getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
         }
     }
@@ -95,8 +100,11 @@ public class NoteContentActivity extends AppCompatActivity {
     {
         if (mChanged)
             saveContent();
-        finish();
-        overridePendingTransition(R.anim.go_into_from_left, R.anim.go_away_to_right);
+        if (mRestarted){
+            finish();
+            overridePendingTransition(R.anim.go_into_from_left, R.anim.go_away_to_right);
+        }else
+            supportFinishAfterTransition();
     }
 
     private void initEdit() {
