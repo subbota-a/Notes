@@ -11,7 +11,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Message;
+import android.os.Parcel;
 import android.support.v7.app.NotificationCompat;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 
@@ -26,17 +28,19 @@ import com.google.android.gms.drive.DriveFolder;
 import com.google.android.gms.drive.Metadata;
 import com.google.android.gms.drive.MetadataBuffer;
 import com.google.android.gms.drive.MetadataChangeSet;
+import com.google.android.gms.drive.metadata.CustomPropertyKey;
 import com.google.android.gms.drive.query.Filters;
 import com.google.android.gms.drive.query.Query;
 import com.google.android.gms.drive.query.SearchableField;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -181,20 +185,31 @@ public class SyncService extends Service {
 
             Log.d("SyncService", "Connected");
             boolean isSyncAll = getSyncAll(mContext);
-            if (isSyncAll){
-                if (!syncAll())
-                    return;
-            }
-            for(Pair<String, Integer> p = mUpdatedFiles.peek(); p!=null; p = mUpdatedFiles.peek())
-            {
-                if (!(isSyncAll || uploadFile(p.first)))
-                    return;
-                mUpdatedFiles.remove();
-                mContext.stopSelf(p.second);
-                Log.d("SyncService", String.format("stopSelf(%d)", p.second));
+            try {
+                beginSyncNotification();
+                if (isSyncAll) {
+                    if (!syncAll())
+                        return;
+                }
+                for (Pair<String, Integer> p = mUpdatedFiles.peek(); p != null; p = mUpdatedFiles.peek()) {
+                    if (!(isSyncAll || uploadFile(p.first)))
+                        return;
+                    mUpdatedFiles.remove();
+                    mContext.stopSelf(p.second);
+                    Log.d("SyncService", String.format("stopSelf(%d)", p.second));
+                }
+            }finally {
+                endSyncNotifycation();
             }
         }
 
+        long getModifiedDate(Metadata remoteFile){
+            long remoteModifiedDate = remoteFile.getModifiedDate().getTime();
+            String customPropValue = remoteFile.getCustomProperties().get(getCustomModifiedDate());
+            if (!TextUtils.isEmpty(customPropValue))
+                remoteModifiedDate = Long.valueOf(customPropValue);
+            return remoteModifiedDate;
+        }
         private boolean syncAll() {
             DriveApi.MetadataBufferResult bufferResult = null;
             Holder<DriveFolder> folder = null;
@@ -218,9 +233,16 @@ public class SyncService extends Service {
                     Metadata remoteFile = buf.get(i);
                     File localFile = localFiles.get(remoteFile.getTitle());
                     if (localFile != null) {
-                        if (remoteFile.getModifiedDate().getTime() < localFile.lastModified())
+                        long remoteModifiedDate = getModifiedDate(remoteFile) / 10000L;
+                        long localModifiedDate = localFile.lastModified() / 10000L;
+                        Log.d("SyncService", String.format("%s: remote %s local %s"
+                                , remoteFile.getTitle()
+                                , new Date(remoteModifiedDate*10000L).toString()
+                                , new Date(localModifiedDate*10000L).toString()));
+                        // С точностью до 10сек
+                        if (remoteModifiedDate< localModifiedDate)
                             uploadFile(folder.get(), localFile, remoteFile.getDriveId().asDriveFile());
-                        else if (remoteFile.getModifiedDate().getTime() < localFile.lastModified())
+                        else if (remoteModifiedDate > localModifiedDate)
                             downloadFile(dir, remoteFile);
                         localFiles.remove(remoteFile.getTitle());
                     } else {
@@ -256,8 +278,13 @@ public class SyncService extends Service {
             OutputStream outputStream = new FileOutputStream(dest);
             copyContents(inputStream, outputStream);
             outputStream.close();
+            dest.setLastModified(getModifiedDate(remoteFile));
         }
 
+        private CustomPropertyKey getCustomModifiedDate()
+        {
+            return new CustomPropertyKey("NoteModifiedDate", 1);
+        }
         private void uploadFile(DriveFolder folder, File localFile, DriveFile driveFile) throws IOException
         {
             Log.d("SyncService", "uploadFile "+localFile.getName());
@@ -274,6 +301,7 @@ public class SyncService extends Service {
                 MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
                         .setTitle(localFile.getName())
                         .setMimeType(mContext.getString(R.string.noteMimeType))
+                        .setCustomProperty(getCustomModifiedDate(), String.valueOf(localFile.lastModified()))
                         .build();
                 if (driveFile != null){
                     checkStatus(contentsResult.getDriveContents().commit(mClient, null).await());
@@ -381,6 +409,22 @@ public class SyncService extends Service {
             builder.setContentIntent(pendingIntent);
             NotificationManager mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
             mNotificationManager.notify(0, builder.build());
+        }
+        private void beginSyncNotification()
+        {
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext);
+            builder.setSmallIcon(R.drawable.ic_sync_24dp);
+            builder.setCategory(Notification.CATEGORY_SERVICE);
+            builder.setContentTitle(mContext.getString(R.string.sync_in_progress));
+            builder.setContentText("");
+            builder.setProgress(0, 0, true);
+            NotificationManager mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            mNotificationManager.notify(1, builder.build());
+        }
+        private void endSyncNotifycation()
+        {
+            NotificationManager mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            mNotificationManager.cancel(1);
         }
         static class MyError extends RuntimeException
         {

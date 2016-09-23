@@ -66,8 +66,6 @@ public class NoteContentActivity extends AppCompatActivity {
         });
         initEdit();
 
-        ViewCompat.setTransitionName(mNoteTitle, "title");
-        ViewCompat.setTransitionName(mEdit, "editor");
         if (savedInstanceState != null){
             mPath = savedInstanceState.getString(keyPath);
             mChanged = savedInstanceState.getBoolean(keyChanged);
@@ -76,17 +74,30 @@ public class NoteContentActivity extends AppCompatActivity {
             Intent intent = getIntent();
             assert intent != null;
             Uri uri = intent.getData();
-            if (uri != null) {
-                LoadContentAsync(uri.getPath());
-            }else// force show keyboard only for new note
-                getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+            if (uri != null)
+                LoadContent(uri.getPath());
         }
+        if (!TextUtils.isEmpty(mPath)) {
+            File f = new File(mPath);
+            String transitionName = f.getName();
+            if (TextUtils.isEmpty(mNoteTitle.getText()))
+                ViewCompat.setTransitionName(mEdit, transitionName);
+            else
+                ViewCompat.setTransitionName(mNoteTitle, transitionName);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (TextUtils.isEmpty(mPath))
+            // force show keyboard only for new note
+            getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        //if (mPath != null && !mPath.isEmpty())
         outState.putString(keyPath, mPath);
         outState.putBoolean(keyChanged, mChanged);
     }
@@ -186,7 +197,7 @@ public class NoteContentActivity extends AppCompatActivity {
                 if (TextUtils.isEmpty(mPath))
                     mEdit.setText(null);
                 else
-                    LoadContentAsync(mPath);
+                    LoadContent(mPath);
                 mChanged = false;
                 return true;
         }
@@ -299,32 +310,18 @@ public class NoteContentActivity extends AppCompatActivity {
         return mNoteTitle.getText().toString();
     }
 
-    private void LoadContentAsync(String path) {
+    private void LoadContent(String path) {
         mLoading = true;
-        new AsyncTask<String, Void, String[]>() {
-            @Override
-            protected String[] doInBackground(String... params) {
-                try{
-                    String path = params[0];
-                    String ret = UtfFile.ReadAll(path);
-                    mPath = path;
-                    return UtfFile.Split(ret);
-                }catch(Exception e){
-                    Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-                return null;
-            }
-
-            @Override
-            protected void onPostExecute(String[] s) {
-                if (s != null) {
-                    Log.d("LoadContentAsync","mEdit.setText");
-                    mEdit.setText(s[1]);
-                    mNoteTitle.setText(s[0]);
-                }
-                mChanged = false;
-                mLoading = false;
-            }
-        }.execute(path);
+        try{
+            String ret = UtfFile.ReadAll(path);
+            mPath = path;
+            String[] s = UtfFile.Split(ret);
+            mEdit.setText(s[1]);
+            mNoteTitle.setText(s[0]);
+        }catch(Exception e){
+            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+        mChanged = false;
+        mLoading = false;
     }
 }

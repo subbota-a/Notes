@@ -1,5 +1,6 @@
 package ru.yandex.subbota_job.notes;
 
+import android.app.ActivityOptions;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
@@ -71,11 +72,7 @@ public class NotesListActivity extends AppCompatActivity
         });
 
         mNotesAdaptor.beginUpdate();
-        if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")){
-            ActivityCompat.requestPermissions(this, new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"}, 0);
-        }else {
-            mNotesAdaptor.updateAsync(mFilterString);
-        }
+        mNotesAdaptor.updateAsync(mFilterString);
     }
 
     class GestureController extends GestureDetector.SimpleOnGestureListener implements ActionMode.Callback{
@@ -164,9 +161,10 @@ public class NotesListActivity extends AppCompatActivity
         intent.setData(Uri.fromFile(item.mFileName));
         ActivityOptionsCompat options;
         if (Build.VERSION.SDK_INT >= 21 ) {
-            View view = mList.getChildAt(position);
+            RecyclerView.ViewHolder vh = mList.findViewHolderForAdapterPosition(position);
+            View view = vh.itemView;
             view = view.findViewById(android.R.id.text1);
-            options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, view, "title");
+            options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, view, item.mFileName.getName());
         }else
             options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left);
         startActivityForResult(intent, 0,options.toBundle());
@@ -191,15 +189,6 @@ public class NotesListActivity extends AppCompatActivity
         Log.d("NodesListActivity", "onStop");
         super.onPause();
         mNotesAdaptor.beginUpdate();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (!Arrays.asList(grantResults).contains(PackageManager.PERMISSION_DENIED)) {
-            finish();
-            //TODO restart
-        }
     }
 
     @Override

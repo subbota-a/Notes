@@ -2,6 +2,7 @@ package ru.yandex.subbota_job.notes;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Environment;
 import android.os.FileObserver;
 import android.os.Handler;
@@ -59,8 +60,12 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
             super(itemView);
             mItem = (TextView)itemView.findViewById(android.R.id.text1);
         }
-        public void setText(String text){
-            mItem.setText(text);
+        public void bindItem(NoteDescription n){
+            mItem.setText(n.mPreviewText);
+            mItem.setMaxLines(n.mHasTitle ? 1: 2);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                mItem.setTransitionName(n.mFileName.getName());
+            }
         }
         public void setSelected(boolean selected){ itemView.setSelected(selected);}
     }
@@ -98,8 +103,7 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         NoteDescription item = mDataSource.get(position);
-        if (item.mPreviewText != null)
-            holder.setText(item.mPreviewText);
+        holder.bindItem(item);
         holder.setSelected(mSelected.contains(position));
     }
     public boolean toggleSelection(int position)
@@ -124,13 +128,9 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
 
     public static File getOrAddDirectory(Context context)
     {
-        String state = Environment.getExternalStorageState();
-        if (state.equals(Environment.MEDIA_MOUNTED)){
-            File dir = new File(Environment.getExternalStoragePublicDirectory("Documents"), NotesListActivity.NotesDirectory);
-            dir.mkdirs();
-            return dir.isDirectory() ? dir : null;
-        }else
-            return context.getApplicationContext().getFilesDir();
+        File dir = new File(context.getApplicationContext().getFilesDir(), NotesListActivity.NotesDirectory);
+        dir.mkdirs();
+        return dir.isDirectory() ? dir : null;
     }
     public void deleteSelectedAsync(final View coordinatorLayout) {
         Integer[] copy = new Integer[mSelected.size()];
@@ -220,7 +220,8 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                         if (populate) {
                             NoteDescription item = new NoteDescription();
                             String[] pair = UtfFile.Split(content);
-                            item.mPreviewText = pair[0]==null ? UtfFile.getLine(pair[1]) : pair[0];
+                            item.mHasTitle = !TextUtils.isEmpty(pair[0]);
+                            item.mPreviewText = item.mHasTitle ? pair[0] : UtfFile.getLine(pair[1]);
                             item.mFileName = f;
                             ret.add(item);
                         }
