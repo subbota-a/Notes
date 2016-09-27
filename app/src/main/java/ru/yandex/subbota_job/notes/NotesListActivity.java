@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
@@ -33,6 +34,9 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.drive.Drive;
 
+import org.w3c.dom.Text;
+
+import java.io.File;
 import java.util.Arrays;
 
 public class NotesListActivity extends AppCompatActivity
@@ -73,6 +77,17 @@ public class NotesListActivity extends AppCompatActivity
 
         mNotesAdaptor.beginUpdate();
         mNotesAdaptor.updateAsync(mFilterString);
+    }
+
+    @Override
+    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        String draftPath = new DraftStorage(this).getDraftPath();
+        if (!TextUtils.isEmpty(draftPath)) {
+            Intent intent = new Intent(this, NoteContentActivity.class);
+            intent.setData(Uri.fromFile(new File(draftPath)));
+            startActivityForResult(intent, 0);
+        }
     }
 
     class GestureController extends GestureDetector.SimpleOnGestureListener implements ActionMode.Callback{

@@ -28,6 +28,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
 
 public class NoteContentActivity extends AppCompatActivity {
     private String mPath;
@@ -42,6 +43,7 @@ public class NoteContentActivity extends AppCompatActivity {
     private boolean mLoading = false;
     private boolean mRestarted = false;
     static final String keyPath = NoteContentActivity.class.getName() + "path";
+    static final String keyContent = NoteContentActivity.class.getName() + "content";
     static final String keyChanged = NoteContentActivity.class.getName() + "changed";
     static final String keyScale = "scale";
 
@@ -75,7 +77,20 @@ public class NoteContentActivity extends AppCompatActivity {
             assert intent != null;
             Uri uri = intent.getData();
             if (uri != null)
-                LoadContent(uri.getPath());
+                mPath = uri.getPath();
+            if (TextUtils.isEmpty(mPath))
+                mPath = "";
+            try{
+                DraftStorage draftStorage = new DraftStorage(this);
+                if (mPath.equals(draftStorage.getDraftPath())) {
+                    putContent(draftStorage.getDraftContent());
+                    mChanged = true;
+                }else
+                    putContent(loadContent());
+            }catch(Exception e){
+                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                finish();
+            }
         }
         if (!TextUtils.isEmpty(mPath)) {
             File f = new File(mPath);
@@ -87,6 +102,15 @@ public class NoteContentActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        getPreferences(Context.MODE_PRIVATE).edit().putFloat(keyScale, mScale).commit();
+        if (isNeedSave()) {
+            new DraftStorage(this).saveDraft(mPath, getContent());
+            Toast.makeText(getApplicationContext(), "Черновик сохранён", Toast.LENGTH_SHORT).show();
+        }
+    }
     @Override
     protected void onResume() {
         super.onResume();
@@ -109,7 +133,7 @@ public class NoteContentActivity extends AppCompatActivity {
 
     private void saveAndExit()
     {
-        if (mChanged)
+        if (isNeedSave())
             saveContent();
         if (mRestarted){
             finish();
@@ -194,10 +218,16 @@ public class NoteContentActivity extends AppCompatActivity {
                 mChanged = false;
                 return true;
             case R.id.undo_action:
+                new DraftStorage(this).clearDraft();
                 if (TextUtils.isEmpty(mPath))
                     mEdit.setText(null);
-                else
-                    LoadContent(mPath);
+                else {
+                    try {
+                        putContent(loadContent());
+                    }catch(Exception e){
+                        Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                }
                 mChanged = false;
                 return true;
         }
@@ -263,11 +293,6 @@ public class NoteContentActivity extends AppCompatActivity {
         });
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        getPreferences(Context.MODE_PRIVATE).edit().putFloat(keyScale, mScale).commit();
-    }
 
     private void updateShareProvider()
     {
@@ -289,18 +314,23 @@ public class NoteContentActivity extends AppCompatActivity {
         return true;
     }
 
+    private String getContent()
+    {
+        return UtfFile.Join(getCustomTitle(), mEdit.getText().toString());
+    }
+    private boolean isNeedSave()
+    {
+        return mChanged && !(mEdit.getText().length() == 0 && mNoteTitle.getText().length() == 0 && TextUtils.isEmpty(mPath));
+    }
     private void saveContent() {
-        Editable editable = mEdit.getText();
-        if (editable.length() == 0 && TextUtils.isEmpty(mPath))
-            return;
         try {
             String path = TextUtils.isEmpty(mPath) ? NewPath() : mPath;
-            String all = UtfFile.Join(getCustomTitle(), editable.toString());
-            UtfFile.Write(path, all);
+            UtfFile.Write(path, getContent());
             mPath = path;
+            mChanged = false;
+            new DraftStorage(this).clearDraft();
             SyncService.onFileChanged(getApplicationContext(), mPath);
             Toast.makeText(getApplicationContext(), R.string.noteSaved, Toast.LENGTH_SHORT).show();
-            mChanged = false;
         }catch(Exception e){
             Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
         }
@@ -310,12 +340,14 @@ public class NoteContentActivity extends AppCompatActivity {
         return mNoteTitle.getText().toString();
     }
 
-    private void LoadContent(String path) {
+    private String loadContent() throws IOException
+    {
+        return UtfFile.ReadAll(mPath);
+    }
+    private void putContent(String content) {
         mLoading = true;
         try{
-            String ret = UtfFile.ReadAll(path);
-            mPath = path;
-            String[] s = UtfFile.Split(ret);
+            String[] s = UtfFile.Split(content);
             mEdit.setText(s[1]);
             mNoteTitle.setText(s[0]);
         }catch(Exception e){
