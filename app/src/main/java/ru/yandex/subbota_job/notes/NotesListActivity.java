@@ -82,10 +82,10 @@ public class NotesListActivity extends AppCompatActivity
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-        String draftPath = new DraftStorage(this).getDraftPath();
-        if (!TextUtils.isEmpty(draftPath)) {
+        DraftStorage draft = new DraftStorage(this);
+        if (!TextUtils.isEmpty(draft.getDraftContent())) {
             Intent intent = new Intent(this, NoteContentActivity.class);
-            intent.setData(Uri.fromFile(new File(draftPath)));
+            intent.setData(new Uri.Builder().path(draft.getDraftPath()).build());
             startActivityForResult(intent, 0);
         }
     }

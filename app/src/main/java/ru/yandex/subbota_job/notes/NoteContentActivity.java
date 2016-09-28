@@ -29,6 +29,7 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 public class NoteContentActivity extends AppCompatActivity {
     private String mPath;
@@ -82,10 +83,10 @@ public class NoteContentActivity extends AppCompatActivity {
                 mPath = "";
             try{
                 DraftStorage draftStorage = new DraftStorage(this);
-                if (mPath.equals(draftStorage.getDraftPath())) {
+                if (TextUtils.equals(mPath, draftStorage.getDraftPath())) {
                     putContent(draftStorage.getDraftContent());
                     mChanged = true;
-                }else
+                }else if (!TextUtils.isEmpty(mPath))
                     putContent(loadContent());
             }catch(Exception e){
                 Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
