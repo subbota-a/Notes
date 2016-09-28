@@ -110,7 +110,8 @@ public class NoteContentActivity extends AppCompatActivity {
         if (isNeedSave()) {
             new DraftStorage(this).saveDraft(mPath, getContent());
             Toast.makeText(getApplicationContext(), "Черновик сохранён", Toast.LENGTH_SHORT).show();
-        }
+        }else
+            new DraftStorage(this).clearDraft();
     }
     @Override
     protected void onResume() {
@@ -136,6 +137,7 @@ public class NoteContentActivity extends AppCompatActivity {
     {
         if (isNeedSave())
             saveContent();
+        new DraftStorage(this).clearDraft();
         if (mRestarted){
             finish();
             overridePendingTransition(R.anim.go_into_from_left, R.anim.go_away_to_right);
@@ -329,7 +331,6 @@ public class NoteContentActivity extends AppCompatActivity {
             UtfFile.Write(path, getContent());
             mPath = path;
             mChanged = false;
-            new DraftStorage(this).clearDraft();
             SyncService.onFileChanged(getApplicationContext(), mPath);
             Toast.makeText(getApplicationContext(), R.string.noteSaved, Toast.LENGTH_SHORT).show();
         }catch(Exception e){
