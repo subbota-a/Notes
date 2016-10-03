@@ -1,20 +1,14 @@
 package ru.yandex.subbota_job.notes;
 
-import android.app.ActivityOptions;
-import android.app.SearchManager;
-import android.content.Context;
+import android.annotation.TargetApi;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.view.MenuItemCompat;
-import android.support.v4.view.WindowCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.ActionMode;
@@ -30,22 +24,15 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.drive.Drive;
-
-import org.w3c.dom.Text;
-
-import java.io.File;
-import java.util.Arrays;
-
 public class NotesListActivity extends AppCompatActivity
 {
-    NotesListAdapter mNotesAdaptor;
-    RecyclerView mList;
-    FloatingActionButton mNewNote;
-    String mFilterString;
+    private NotesListAdapter mNotesAdaptor;
+    private RecyclerView mList;
+    private FloatingActionButton mNewNote;
+    private String mFilterString;
     public final static String NotesDirectory = "notes";
+    private final static String editedFileKey = "editedFileKey";
+    private String editedFile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +51,37 @@ public class NotesListActivity extends AppCompatActivity
         mList.setLayoutManager(new LinearLayoutManager(this));
         mList.setAdapter(mNotesAdaptor);
 
+        if (savedInstanceState != null){
+            editedFile = savedInstanceState.getString(editedFileKey);
+        }
+        if (!TextUtils.isEmpty(editedFile)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                postponeEnterTransition();
+            }
+        }
+        mNotesAdaptor.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+            @Override
+            public void onChanged() {
+                super.onChanged();
+//                mNotesAdaptor.unregisterAdapterDataObserver(this);
+                if (!TextUtils.isEmpty(editedFile))
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        startPostponedEnterTransition();
+                    }
+                LinearLayoutManager m = (LinearLayoutManager) mList.getLayoutManager();
+                int pos1 = m.findFirstCompletelyVisibleItemPosition();
+                int pos2 = m.findLastCompletelyVisibleItemPosition();
+                Log.d("onChanged", String.format("%d,%d", pos1, pos2));
+                for(int i=0; i<mNotesAdaptor.getItemCount() && !TextUtils.isEmpty(editedFile); ++i)
+                    if (mNotesAdaptor.getItem(i).mFileName.getName().equals(editedFile)) {
+                        if (i<pos1 || i>pos2)
+                            m.scrollToPosition(i);
+                        break;
+                    }
+                editedFile = null;
+            }
+        });
+
         new RecyclerViewGestureDetector(this, mList, new GestureController());
 
 
@@ -75,8 +93,14 @@ public class NotesListActivity extends AppCompatActivity
             }
         });
 
-        mNotesAdaptor.beginUpdate();
+        //mNotesAdaptor.beginUpdate();
         mNotesAdaptor.updateAsync(mFilterString);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(editedFileKey, editedFile);
     }
 
     @Override
@@ -183,6 +207,7 @@ public class NotesListActivity extends AppCompatActivity
         }else
             options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left);
         startActivityForResult(intent, 0,options.toBundle());
+        editedFile = item.mFileName.getName();
     }
 
     private void createNewNote() {
@@ -196,14 +221,14 @@ public class NotesListActivity extends AppCompatActivity
     protected void onResume() {
         Log.d("NodesListActivity", "onResume");
         super.onResume();
-        mNotesAdaptor.endUpdate();
+        //mNotesAdaptor.endUpdate();
     }
 
     @Override
     protected void onPause() {
-        Log.d("NodesListActivity", "onStop");
+        Log.d("NodesListActivity", "onPause");
         super.onPause();
-        mNotesAdaptor.beginUpdate();
+        //mNotesAdaptor.beginUpdate();
     }
 
     @Override

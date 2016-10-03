@@ -135,14 +135,21 @@ public class NoteContentActivity extends AppCompatActivity {
 
     private void saveAndExit()
     {
-        if (isNeedSave())
+        if (isNeedSave()) {
             saveContent();
+            setResult(RESULT_OK);
+        }else{
+            setResult(RESULT_CANCELED);
+        }
         new DraftStorage(this).clearDraft();
+        supportFinishAfterTransition();
+/*
         if (mRestarted){
             finish();
             overridePendingTransition(R.anim.go_into_from_left, R.anim.go_away_to_right);
         }else
             supportFinishAfterTransition();
+*/
     }
 
     private void initEdit() {

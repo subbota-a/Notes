@@ -196,6 +196,13 @@ public class NotesListAdapter extends RecyclerView.Adapter<NotesListAdapter.View
                 File file = getOrAddDirectory(mContext);
                 if (file == null)
                     return null;
+/*
+                try {
+                    Thread.sleep(3000);
+                }catch(InterruptedException e){
+                    return null;
+                }
+*/
                 File[] files = file.listFiles();
                 Arrays.sort(files, new Comparator<File>() {
                     // make recent first
