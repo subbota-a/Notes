@@ -247,6 +247,8 @@ public class NoteContentActivity extends AppCompatActivity {
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         mGesture.onTouchEvent(ev);
+        if (mGesture.isInProgress())
+            Log.d("NoteContextActivity", "mGesture.isInProgress()");
         return mGesture.isInProgress() || super.dispatchTouchEvent(ev);
     }
 

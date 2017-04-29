@@ -199,12 +199,12 @@ public class NotesListActivity extends AppCompatActivity
         Intent intent = new Intent(this, NoteContentActivity.class);
         intent.setData(Uri.fromFile(item.mFileName));
         ActivityOptionsCompat options;
-        if (Build.VERSION.SDK_INT >= 21 ) {
+        /*if (Build.VERSION.SDK_INT >= 21 ) {
             RecyclerView.ViewHolder vh = mList.findViewHolderForAdapterPosition(position);
             View view = vh.itemView;
             view = view.findViewById(android.R.id.text1);
             options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, view, item.mFileName.getName());
-        }else
+        }else*/
             options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left);
         startActivityForResult(intent, 0,options.toBundle());
         editedFile = item.mFileName.getName();

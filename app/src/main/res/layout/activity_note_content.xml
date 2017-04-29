@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
+    android:id="@+id/coordinatorLayout"
     tools:context="ru.yandex.subbota_job.notes.NoteContentActivity"
     >
 
@@ -18,7 +19,6 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:layout_scrollFlags="scroll|enterAlways|snap"
             >
             <EditText
                 android:layout_width="wrap_content"
@@ -35,18 +35,15 @@
             <!--android:background="?android:attr/actionBarItemBackground"-->
         </android.support.v7.widget.Toolbar>
     </android.support.design.widget.AppBarLayout>
-
-    <EditText
+    <ru.yandex.subbota_job.notes.FlingableEditText
         android:id="@+id/editor"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:inputType="textMultiLine|text"
-        android:gravity="start|top"
-        android:layout_margin="5dp"
-        android:minLines="5"
+        android:background="@null"
+        android:gravity="top"
         android:hint="@string/note_hint"
-        android:background="@android:color/transparent"
-        >
+        android:inputType="textMultiLine|textImeMultiLine"
+        android:padding="5dp">
         <requestFocus />
-    </EditText>
+    </ru.yandex.subbota_job.notes.FlingableEditText>
 </LinearLayout>
