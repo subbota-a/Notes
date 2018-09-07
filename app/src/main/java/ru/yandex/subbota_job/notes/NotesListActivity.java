@@ -1,13 +1,16 @@
 package ru.yandex.subbota_job.notes;
 
 import android.annotation.TargetApi;
+import android.app.Dialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -24,6 +27,10 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.SupportErrorDialogFragment;
+
 public class NotesListActivity extends AppCompatActivity
 {
     private NotesListAdapter mNotesAdaptor;
@@ -38,7 +45,7 @@ public class NotesListActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_notes_list);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         ActionBar actionBar = getSupportActionBar();
@@ -46,7 +53,7 @@ public class NotesListActivity extends AppCompatActivity
 
         mNotesAdaptor = new NotesListAdapter(this);
 
-        mList = (RecyclerView)findViewById(R.id.listview);
+        mList = findViewById(R.id.listview);
         assert mList != null;
         mList.setLayoutManager(new LinearLayoutManager(this));
         mList.setAdapter(mNotesAdaptor);
@@ -85,7 +92,7 @@ public class NotesListActivity extends AppCompatActivity
         new RecyclerViewGestureDetector(this, mList, new GestureController());
 
 
-        mNewNote = (FloatingActionButton) findViewById(R.id.fab);
+        mNewNote = findViewById(R.id.fab);
         mNewNote.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -206,7 +213,7 @@ public class NotesListActivity extends AppCompatActivity
             options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, view, item.mFileName.getName());
         }else*/
             options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left);
-        startActivityForResult(intent, 0,options.toBundle());
+        ActivityCompat.startActivityForResult(this, intent, 0,options.toBundle());
         editedFile = item.mFileName.getName();
     }
 
@@ -214,7 +221,7 @@ public class NotesListActivity extends AppCompatActivity
         Intent intent = new Intent(this, NoteContentActivity.class);
         ActivityOptionsCompat options;
         options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left);
-        startActivityForResult(intent, 0, options.toBundle());
+        ActivityCompat.startActivityForResult(this, intent, 0, options.toBundle());
     }
 
     @Override
@@ -242,13 +249,16 @@ public class NotesListActivity extends AppCompatActivity
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_sync) {
-            SyncService.syncAll(getApplicationContext());
+            if (!SyncService.isSyncAvailable(this)) {
+                SyncService.showAvailableError(this, 2);
+            }else
+                SyncService.syncAll(getApplicationContext());
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    class Search implements MenuItemCompat.OnActionExpandListener
+    class Search implements MenuItem.OnActionExpandListener
             , MenuItem.OnMenuItemClickListener
             , SearchView.OnQueryTextListener
             , SearchView.OnCloseListener
@@ -259,7 +269,7 @@ public class NotesListActivity extends AppCompatActivity
         {
             mItem = mi;
             mi.setOnMenuItemClickListener(this);
-            MenuItemCompat.setOnActionExpandListener(mi, this);
+            mi.setOnActionExpandListener(this);
             mSearchView = (android.widget.SearchView) mi.getActionView();
             mSearchView.setQueryHint(getResources().getString(R.string.action_search));
             mSearchView.setSubmitButtonEnabled(false);

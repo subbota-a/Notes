@@ -22,4 +22,8 @@
     <string name="action_undo">Вернуть</string>
     <string name="sync_in_progress">Синхронизация заметок</string>
     <string name="shared_preferences"></string>
+    <string name="alarm_channel_name">alarm</string>
+    <string name="alarm_channel_description">Alarms</string>
+    <string name="running_channel_name">running</string>
+    <string name="running_channel_description">running long</string>
 </resources>

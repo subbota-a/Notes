@@ -1,24 +1,30 @@
 package ru.yandex.subbota_job.notes;
 
+import android.app.Activity;
+import android.app.Dialog;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Message;
-import android.os.Parcel;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.SupportErrorDialogFragment;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Releasable;
 import com.google.android.gms.drive.Drive;
@@ -39,7 +45,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,8 +67,21 @@ public class SyncService extends Service {
         return null;
     }
 
+    public static boolean isSyncAvailable(Context context)
+    {
+        GoogleApiAvailability client = GoogleApiAvailability.getInstance();
+        return client.isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS;
+    }
+    public static void showAvailableError(AppCompatActivity context, int req)
+    {
+        GoogleApiAvailability client = GoogleApiAvailability.getInstance();
+        Dialog dlg = client.getErrorDialog(context, client.isGooglePlayServicesAvailable(context), req);
+        SupportErrorDialogFragment.newInstance(dlg).show(context.getSupportFragmentManager(), "");
+    }
     public static void onFileChanged(Context context, String path) {
         Log.d("SyncService", "OnFileChanged");
+        if (!isSyncAvailable(context))
+            return;
         Intent intent = new Intent(context, SyncService.class);
         intent.setData(Uri.fromFile(new File(path)));
         intent.putExtra(COMMAND, OnFileChanged);
@@ -72,6 +90,8 @@ public class SyncService extends Service {
 
     public static void restart(Context context) {
         Log.d("SyncService", "OnContinue");
+        if (!isSyncAvailable(context))
+            return;
         Intent intent = new Intent(context, SyncService.class);
         intent.putExtra(COMMAND, OnContinue);
         context.startService(intent);
@@ -79,6 +99,8 @@ public class SyncService extends Service {
 
     public static void syncAll(Context context) {
         Log.d("SyncService", "SyncAll");
+        if (!isSyncAvailable(context))
+            return;
         setSyncAll(context, true);
         restart(context);
     }
@@ -123,6 +145,8 @@ public class SyncService extends Service {
     }
 
     static class Impl implements Handler.Callback{
+        private static final String ALARM_CHANNEL_ID = "ru.yandex.subbota_job.alarm_channel_id";
+        private static final String ACTION_CHANNEL_ID = "ru.yandex.subbota_job.action_channel_id";
         private Service mContext;
         private GoogleApiClient mClient;
         private boolean mResolvePending = false;
@@ -392,16 +416,32 @@ public class SyncService extends Service {
                 return new Holder(null, result.getDriveFolder());
             }
         }
+        private void createNotificationChannel() {
+            // Create the NotificationChannel, but only on API 26+ because
+            // the NotificationChannel class is new and not in the support library
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(ALARM_CHANNEL_ID, mContext.getString(R.string.alarm_channel_name), NotificationManager.IMPORTANCE_HIGH);
+                channel.setDescription(mContext.getString(R.string.alarm_channel_description));
+                // Register the channel with the system; you can't change the importance
+                // or other notification behaviors after this
+                NotificationManager notificationManager = mContext.getSystemService(NotificationManager.class);
+                notificationManager.createNotificationChannel(channel);
 
+                channel = new NotificationChannel(ACTION_CHANNEL_ID, mContext.getString(R.string.running_channel_name), NotificationManager.IMPORTANCE_LOW);
+                channel.setDescription(mContext.getString(R.string.running_channel_description));
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
         private void makeNotification(PendingIntent resolution, int errCode, String notifyTitle, String notifyText)
         {
+            createNotificationChannel();
             Intent intent = new Intent(mContext, ConnectionActivity.class);
             intent.putExtra(ConnectionActivity.PENDING_INTENT, resolution);
             intent.putExtra(ConnectionActivity.CONNECTION_ERROR, errCode);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
             PendingIntent pendingIntent = PendingIntent.getActivity(mContext, 0, intent, 0);
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext);
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext, ALARM_CHANNEL_ID);
             builder.setSmallIcon(R.drawable.ic_warning_24dp);
             builder.setCategory(Notification.CATEGORY_ERROR);
             builder.setContentTitle(notifyTitle);
@@ -412,19 +452,21 @@ public class SyncService extends Service {
         }
         private void beginSyncNotification()
         {
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext);
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext, ACTION_CHANNEL_ID);
             builder.setSmallIcon(R.drawable.ic_sync_24dp);
             builder.setCategory(Notification.CATEGORY_SERVICE);
             builder.setContentTitle(mContext.getString(R.string.sync_in_progress));
             builder.setContentText("");
             builder.setProgress(0, 0, true);
-            NotificationManager mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
-            mNotificationManager.notify(1, builder.build());
+            //NotificationManager mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            //mNotificationManager.notify(1, builder.build());
+            mContext.startForeground(1, builder.build());
         }
         private void endSyncNotifycation()
         {
-            NotificationManager mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
-            mNotificationManager.cancel(1);
+            //NotificationManager mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            //mNotificationManager.cancel(1);
+            mContext.stopForeground(true);
         }
         static class MyError extends RuntimeException
         {
