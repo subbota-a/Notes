@@ -3,21 +3,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/note_item_background_selector"
     android:layout_margin="8dp"
+    android:background="@drawable/note_item_background_selector"
     android:padding="16dp"
-    android:elevation="8dp"
-    >
+    android:elevation="4dp">
+
     <TextView
         android:id="@android:id/text1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical|start"
-        android:text="@string/filePreviewNotLoaded"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large"
-        android:maxLines="2"
         android:ellipsize="end"
-        />
+        android:gravity="center_vertical|start"
+        android:maxLines="2"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        tools:text="Загружается...." />
 </FrameLayout>
 <!--    android:backgroundTint="?android:tint"
 -->

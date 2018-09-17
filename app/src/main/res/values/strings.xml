@@ -26,4 +26,5 @@
     <string name="alarm_channel_description">Alarms</string>
     <string name="running_channel_name">running</string>
     <string name="running_channel_description">running long</string>
+    <string name="import_in_progress">Импорт заметок</string>
 </resources>

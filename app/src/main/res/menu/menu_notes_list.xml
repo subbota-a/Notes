@@ -1,7 +1,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".NotesListActivity">
+    tools:context=".viewController.NotesListActivity">
     <item android:id="@+id/action_search"
         android:orderInCategory="101"
         android:title="@string/action_search"
@@ -12,5 +12,9 @@
     <item android:id="@+id/action_sync"
         android:title="Синхронизировать"
         android:icon="@drawable/ic_sync_24dp"
+        />
+    <item android:id="@+id/action_import"
+        android:title="Импорт"
+        android:icon="@drawable/download"
         />
 </menu>
