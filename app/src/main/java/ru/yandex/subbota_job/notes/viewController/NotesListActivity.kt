@@ -1,66 +1,70 @@
-package ru.yandex.subbota_job.notes
+package ru.yandex.subbota_job.notes.viewController
 
-import android.annotation.TargetApi
-import android.app.Dialog
+import android.arch.lifecycle.Observer
+import android.arch.lifecycle.ViewModelProviders.*
+import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
+import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.ActivityOptionsCompat
-import android.support.v4.app.DialogFragment
-import android.support.v4.view.MenuItemCompat
-import android.support.v7.app.ActionBar
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.view.ActionMode
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.support.v7.widget.Toolbar
 import android.text.TextUtils
 import android.util.Log
-import android.widget.SearchView
-import android.support.v7.widget.Toolbar
 import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.View
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
+import android.widget.SearchView
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import ru.yandex.subbota_job.notes.*
+import ru.yandex.subbota_job.notes.executor.ImportService
+import ru.yandex.subbota_job.notes.viewModel.NotesListViewModel
+import com.google.firebase.auth.FirebaseAuth
 
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.common.SupportErrorDialogFragment
 
 class NotesListActivity : AppCompatActivity() {
-	private var mNotesAdaptor: NotesListAdapter? = null
-	private var mList: RecyclerView? = null
+	private lateinit var mNotesAdaptor: NoteDescriptionListAdapter
+	private lateinit var mList: RecyclerView
 	private var mNewNote: FloatingActionButton? = null
-	private var mFilterString: String? = null
+	//private var mFilterString: String? = null
 	private var editedFile: String? = null
+
+	private lateinit var viewModel: NotesListViewModel
+
+	private lateinit var signInClient: GoogleSignInClient
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
+		if (!isAuthenticated()) {
+			startAuthentication()
+			return
+		}
+
 		setContentView(R.layout.activity_notes_list)
 		val toolbar = findViewById<Toolbar>(R.id.toolbar)
 		setSupportActionBar(toolbar)
 
-		val actionBar = supportActionBar
-		assert(actionBar != null)
+		viewModel = of(this).get(NotesListViewModel::class.java)
 
-		mNotesAdaptor = NotesListAdapter(this)
+		mNotesAdaptor = NoteDescriptionListAdapter(this)
 
-		mList = findViewById(R.id.listview)
-		assert(mList != null)
-		mList!!.layoutManager = LinearLayoutManager(this)
-		mList!!.adapter = mNotesAdaptor
+		mList = findViewById(R.id.listview)!!
+		mList.layoutManager = LinearLayoutManager(this)
+		mList.adapter = mNotesAdaptor
 
-		if (savedInstanceState != null) {
-			editedFile = savedInstanceState.getString(editedFileKey)
-		}
 		if (!TextUtils.isEmpty(editedFile)) {
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 				postponeEnterTransition()
 			}
 		}
+		/*
 		mNotesAdaptor!!.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
 			override fun onChanged() {
 				super.onChanged()
@@ -85,65 +89,68 @@ class NotesListActivity : AppCompatActivity() {
 				editedFile = null
 			}
 		})
-
+		*/
 		RecyclerViewGestureDetector(this, mList!!, GestureController())
 
-
 		mNewNote = findViewById(R.id.fab)
-		mNewNote!!.setOnClickListener { createNewNote() }
+		mNewNote!!.setOnClickListener { editNote(null, false) }
 
-		//mNotesAdaptor.beginUpdate();
-		mNotesAdaptor!!.updateAsync(mFilterString)
+		viewModel.undoSnackbar.observe(this, Observer {
+			if (it != null && !it.isEmpty())
+				showUndoDeleteSnackbar(it)
+		})
+		if (getPreferences(Context.MODE_PRIVATE).contains(KeyEditingId)) {
+			val id = getPreferences(Context.MODE_PRIVATE).getLong(KeyEditingId, 0)
+			editNote(if (id==0L) null else id, true)
+		}
+		startImport(false)
 	}
 
 	override fun onSaveInstanceState(outState: Bundle) {
 		super.onSaveInstanceState(outState)
-		outState.putString(editedFileKey, editedFile)
-	}
-
-	override fun onPostCreate(savedInstanceState: Bundle?) {
-		super.onPostCreate(savedInstanceState)
-		val draft = DraftStorage(this)
-		if (!TextUtils.isEmpty(draft.draftContent)) {
-			val intent = Intent(this, NoteContentActivity::class.java)
-			intent.data = Uri.Builder().path(draft.draftPath).build()
-			startActivityForResult(intent, 0)
-		}
 	}
 
 	internal inner class GestureController : GestureDetector.SimpleOnGestureListener(), ActionMode.Callback {
 		private var mActionMode: ActionMode? = null
-		val isSelectionMode: Boolean
-			get() = mActionMode != null
+		val isSelectionMode: Boolean get() = mActionMode != null
+		init{
+			viewModel.activeMode.observe(this@NotesListActivity, Observer<Boolean>{
+				if (it == isSelectionMode) return@Observer
+				if (it!!)
+					beginSelectionMode()
+				else
+					endSelectionMode()
+			})
+		}
 
-		fun getAdapterPosition(e: MotionEvent): Int {
-			val itemView = mList!!.findChildViewUnder(e.x, e.y) ?: return RecyclerView.NO_POSITION
-			return mList!!.getChildAdapterPosition(itemView)
+		fun getItemId(e: MotionEvent): Long {
+			val itemView = mList!!.findChildViewUnder(e.x, e.y) ?: return RecyclerView.NO_ID
+			return mList!!.getChildItemId(itemView)
 		}
 
 		override fun onSingleTapUp(e: MotionEvent): Boolean {
-			val position = getAdapterPosition(e)
-			if (position == RecyclerView.NO_POSITION)
+			val id = getItemId(e)
+			if (id == RecyclerView.NO_ID)
 				return false
 			if (isSelectionMode)
-				toggleSelection(position)
+				toggleSelection(id)
 			else
-				editNote(position)
+				editNote(id, false)
 			return true
 		}
 
 		override fun onLongPress(e: MotionEvent) {
-			val position = getAdapterPosition(e)
-			if (position == RecyclerView.NO_POSITION)
+			val id = getItemId(e)
+			if (id == RecyclerView.NO_ID)
 				return
-			toggleSelection(position)
+			toggleSelection(id)
 		}
 
-		fun toggleSelection(position: Int) {
+		fun toggleSelection(id:Long) {
 			if (!isSelectionMode)
 				beginSelectionMode()
-			mNotesAdaptor!!.toggleSelection(position)
-			val count = mNotesAdaptor!!.selectionCount
+			viewModel.selectedIds.toggle(id)
+			val count = viewModel.selectedIds.count
 			mActionMode!!.title = count.toString()
 			if (count == 0)
 				endSelectionMode()
@@ -155,6 +162,7 @@ class NotesListActivity : AppCompatActivity() {
 
 		private fun beginSelectionMode() {
 			mActionMode = startSupportActionMode(this)
+			viewModel.activeMode.value = true
 			mNewNote!!.hide()
 		}
 
@@ -169,47 +177,79 @@ class NotesListActivity : AppCompatActivity() {
 
 		override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
 			if (item.itemId == R.id.action_delete) {
-				mNotesAdaptor!!.deleteSelectedAsync(findViewById(R.id.coordinatorLayout))
+				val ids = viewModel.selectedIds.items.toList()
 				endSelectionMode()
+				softDelete(ids)
 				return true
 			}
 			return false
 		}
-
 		override fun onDestroyActionMode(mode: ActionMode) {
 			mActionMode = null
-			mNotesAdaptor!!.clearAllSelection()
+			viewModel.activeMode.value = false
+			viewModel.selectedIds.clear()
 			mNewNote!!.show()
 		}
 	}
+	private fun softDelete(ids: List<Long>){
+		viewModel.softDelete(ids, true)
+		viewModel.undoSnackbar.value = ids
+	}
 
-	private fun editNote(position: Int) {
-		val item = mNotesAdaptor!!.getItem(position)
+	private fun showUndoDeleteSnackbar(ids: List<Long>) {
+		val message = getString(R.string.removed_notes_message, ids.size)
+		val snackbar = Snackbar.make(findViewById(R.id.coordinatorLayout), message, Snackbar.LENGTH_LONG)
+		snackbar.setAction(R.string.undo) {
+			viewModel.softDelete(ids, false)
+		}
+		snackbar.addCallback(object: Snackbar.Callback(){
+			override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+				Log.d("showUndoDeleteSnackbar", "onDismissed $event")
+				viewModel.undoSnackbar.value = null
+			}
+		})
+		snackbar.show()
+	}
+
+	private fun editNote(id:Long?, continueEditing: Boolean) {
 		val intent = Intent(this, NoteContentActivity::class.java)
-		intent.data = Uri.fromFile(item.mFileName)
-		val options: ActivityOptionsCompat
+		if (id != null)
+			intent.putExtra(NoteContentActivity.IdKey, id)
+		intent.putExtra(NoteContentActivity.ContinueKey, continueEditing)
 		/*if (Build.VERSION.SDK_INT >= 21 ) {
             RecyclerView.ViewHolder vh = mList.findViewHolderForAdapterPosition(position);
             View view = vh.itemView;
             view = view.findViewById(android.R.id.text1);
             options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, view, item.mFileName.getName());
         }else*/
-		options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left)
-		ActivityCompat.startActivityForResult(this, intent, 0, options.toBundle())
-		editedFile = item.mFileName!!.name
-	}
-
-	private fun createNewNote() {
-		val intent = Intent(this, NoteContentActivity::class.java)
-		val options: ActivityOptionsCompat
-		options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left)
-		ActivityCompat.startActivityForResult(this, intent, 0, options.toBundle())
+		val options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.go_into_from_right, R.anim.go_away_to_left)
+		ActivityCompat.startActivityForResult(this, intent, RC_EDITING, options.toBundle())
+		getPreferences(Context.MODE_PRIVATE).edit().putLong(KeyEditingId, id ?: 0).apply()
 	}
 
 	override fun onResume() {
 		Log.d("NodesListActivity", "onResume")
 		super.onResume()
-		//mNotesAdaptor.endUpdate();
+	}
+
+	private fun isAuthenticated() : Boolean = FirebaseAuth.getInstance()?.currentUser != null
+
+	private fun startAuthentication(){
+		val intent = Intent(this, ConnectionActivity::class.java)
+				.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+				.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+		startActivity(intent)
+	}
+
+	private fun startImport(force:Boolean = false) {
+		ImportService.startImport(this, force)
+	}
+
+	override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+		super.onActivityResult(requestCode, resultCode, data)
+		when(requestCode) {
+			RC_EDITING -> getPreferences(Context.MODE_PRIVATE).edit().remove(KeyEditingId).apply()
+		}
 	}
 
 	override fun onPause() {
@@ -226,19 +266,16 @@ class NotesListActivity : AppCompatActivity() {
 	}
 
 	override fun onOptionsItemSelected(item: MenuItem): Boolean {
-		if (item.itemId == R.id.action_sync) {
-			if (!SyncService.isSyncAvailable(this)) {
-				SyncService.showAvailableError(this, 2)
-			} else
-				SyncService.syncAll(applicationContext)
+		if (item.itemId == R.id.action_import) {
+			startImport(force = true)
 			return true
 		}
 		return super.onOptionsItemSelected(item)
 	}
 
 	internal inner class Search(val mItem: MenuItem) : MenuItem.OnActionExpandListener, MenuItem.OnMenuItemClickListener, SearchView.OnQueryTextListener, SearchView.OnCloseListener {
-		val mSearchView: SearchView
-
+		private val mSearchView: SearchView
+		private var searchMode : Boolean  = false
 		init {
 			mItem.setOnMenuItemClickListener(this)
 			mItem.setOnActionExpandListener(this)
@@ -248,24 +285,46 @@ class NotesListActivity : AppCompatActivity() {
 			mSearchView.isIconified = true
 			mSearchView.setOnCloseListener(this)
 			mSearchView.setOnQueryTextListener(this)
+			viewModel.searchMode.observe(this@NotesListActivity, Observer {
+				if (it!! == searchMode)
+					return@Observer
+				if (it) {
+					beginSearchMode()
+					mItem.expandActionView()
+				}else {
+					endSearchMode()
+					mItem.collapseActionView()
+				}
+			})
 		}
 
-		override fun onMenuItemClick(item: MenuItem): Boolean {
-			mSearchView.setQuery(mFilterString, false)
+		private fun beginSearchMode()
+		{
+			mSearchView.setQuery(viewModel.filterString, false)
 			mSearchView.isIconified = false
+			searchMode = true
+			viewModel.searchMode.value = searchMode
+		}
+		private fun endSearchMode()
+		{
+			mSearchView.clearFocus()
+			viewModel.filterString = null
+			searchMode = false
+			viewModel.searchMode.value = searchMode
+		}
+		override fun onMenuItemClick(item: MenuItem): Boolean {
+			// expandActionView is called internally
 			return true
 		}
 
 		override fun onMenuItemActionExpand(item: MenuItem): Boolean {
+			beginSearchMode()
 			return true
 		}
 
 		override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
 			Log.d("Search", "onMenuItemActionCollapse")
-			mSearchView.clearFocus()
-			if (!TextUtils.isEmpty(mFilterString))
-				mNotesAdaptor!!.updateAsync(null)
-			mFilterString = null
+			endSearchMode()
 			return true
 		}
 
@@ -274,19 +333,13 @@ class NotesListActivity : AppCompatActivity() {
 			return true
 		}
 
-		fun setNullOnEmpty(s: String?): String? {
+		private fun setNullOnEmpty(s: String?): String? {
 			return if (TextUtils.isEmpty(s)) null else s
 		}
 
-		override fun onQueryTextChange(query: String?): Boolean {
-			var query = query
+		override fun onQueryTextChange(query_: String?): Boolean {
 			Log.d("Search", "onQueryTextChange")
-			query = setNullOnEmpty(query)
-			mFilterString = setNullOnEmpty(mFilterString)
-			if (!TextUtils.equals(mFilterString, query)) {
-				mFilterString = query
-				mNotesAdaptor!!.updateAsync(mFilterString)
-			}
+			viewModel.filterString = setNullOnEmpty(query_)
 			return true
 		}
 
@@ -298,7 +351,7 @@ class NotesListActivity : AppCompatActivity() {
 	}
 
 	companion object {
-		val NotesDirectory = "notes"
-		private val editedFileKey = "editedFileKey"
+		private const val RC_EDITING = 11;
+		private const val KeyEditingId = "EditingNoteId"
 	}
 }

@@ -1,61 +1,16 @@
 package ru.yandex.subbota_job.notes
 
-import android.app.Activity
-import android.app.Dialog
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.IBinder
-import android.os.Message
-import android.support.v4.app.ActivityCompat
-import android.support.v4.app.NotificationCompat
-import android.support.v7.app.AppCompatActivity
-import android.text.TextUtils
-import android.util.Log
-import android.util.Pair
-
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.common.SupportErrorDialogFragment
-import com.google.android.gms.common.api.GoogleApiClient
-import com.google.android.gms.common.api.Releasable
-import com.google.android.gms.drive.Drive
-import com.google.android.gms.drive.DriveApi
-import com.google.android.gms.drive.DriveFile
-import com.google.android.gms.drive.DriveFolder
-import com.google.android.gms.drive.Metadata
-import com.google.android.gms.drive.MetadataBuffer
-import com.google.android.gms.drive.MetadataChangeSet
-import com.google.android.gms.drive.metadata.CustomPropertyKey
-import com.google.android.gms.drive.query.Filters
-import com.google.android.gms.drive.query.Query
-import com.google.android.gms.drive.query.SearchableField
-
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
-import java.util.Date
-import java.util.HashMap
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.LinkedBlockingQueue
 
 class SyncService : Service() {
-	private var mHandler: Handler? = null
+	//private var mHandler: Handler? = null
 	override fun onBind(intent: Intent): IBinder? {
 		return null
 	}
 
+	/*
 	override fun onCreate() {
 		Log.d("SyncService", "onCreate")
 		val mThread = HandlerThread("SyncService.Thread")
@@ -206,7 +161,7 @@ class SyncService : Service() {
 			var folder: Holder<DriveFolder>? = null
 			try {
 				Log.d("SyncService", "syncAll")
-				val dir = NotesListAdapter.getOrAddDirectory(mContext) ?: return false
+				val dir = getOrAddDirectory(mContext) ?: return false
 				val localFiles = HashMap<String, File>()
 				for (f in dir.listFiles()) {
 					localFiles[f.name] = f
@@ -223,7 +178,7 @@ class SyncService : Service() {
 					val localFile = localFiles[remoteFile.title]
 					if (localFile != null) {
 						val remoteModifiedDate = getModifiedDate(remoteFile) / 10000L
-						val localModifiedDate = localFile.lastModified() / 10000L
+						val localModifiedDate = localFile.modified() / 10000L
 						Log.d("SyncService", String.format("%s: remote %s local %s", remoteFile.title, Date(remoteModifiedDate * 10000L).toString(), Date(localModifiedDate * 10000L).toString()))
 						// С точностью до 10сек
 						if (remoteModifiedDate < localModifiedDate)
@@ -263,7 +218,7 @@ class SyncService : Service() {
 			val outputStream = FileOutputStream(dest)
 			copyContents(inputStream, outputStream)
 			outputStream.close()
-			dest.setLastModified(getModifiedDate(remoteFile))
+			dest.setModified(getModifiedDate(remoteFile))
 		}
 
 		@Throws(IOException::class)
@@ -281,7 +236,7 @@ class SyncService : Service() {
 				val changeSet = MetadataChangeSet.Builder()
 						.setTitle(localFile.name)
 						.setMimeType(mContext.getString(R.string.noteMimeType))
-						.setCustomProperty(customModifiedDate, localFile.lastModified().toString())
+						.setCustomProperty(customModifiedDate, localFile.modified().toString())
 						.build()
 				if (driveFile != null) {
 					checkStatus(contentsResult.driveContents.commit(mClient, null).await())
@@ -468,4 +423,5 @@ class SyncService : Service() {
 					.commit()
 		}
 	}
+	*/
 }

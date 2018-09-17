@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    tools:context=".NotesListActivity"
+    tools:context=".viewController.NotesListActivity"
     android:id="@+id/coordinatorLayout">
 
     <android.support.design.widget.AppBarLayout
@@ -28,7 +28,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:context=".NotesListActivity"
+        tools:context=".viewController.NotesListActivity"
         tools:showIn="@layout/activity_notes_list"
         android:background="@drawable/tile_background"
         >

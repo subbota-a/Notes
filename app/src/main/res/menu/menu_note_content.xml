@@ -1,7 +1,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="ru.yandex.subbota_job.notes.NoteContentActivity">
+    tools:context="ru.yandex.subbota_job.notes.viewController.NoteContentActivity">
     <item
         android:id="@+id/share_action"
         android:orderInCategory="100"

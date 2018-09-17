@@ -1,4 +1,4 @@
-package ru.yandex.subbota_job.notes
+package ru.yandex.subbota_job.notes.viewController
 
 import android.content.Context
 import android.gesture.GestureOverlayView

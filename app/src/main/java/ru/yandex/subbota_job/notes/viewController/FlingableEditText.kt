@@ -1,4 +1,4 @@
-package ru.yandex.subbota_job.notes
+package ru.yandex.subbota_job.notes.viewController
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -16,6 +16,17 @@ import android.widget.Scroller
 
 @SuppressLint("AppCompatCustomView")
 class FlingableEditText : EditText, GestureDetector.OnGestureListener {
+	var onSelectionChanged: ((selStart: Int, selEnd: Int)->Unit)? = null
+	override fun onSelectionChanged(selStart: Int, selEnd: Int) {
+		super.onSelectionChanged(selStart, selEnd)
+		onSelectionChanged?.invoke(selStart, selEnd)
+	}
+	var onScrollChanged : (()->Unit)? = null
+	override fun onScrollChanged(horiz: Int, vert: Int, oldHoriz: Int, oldVert: Int) {
+		super.onScrollChanged(horiz, vert, oldHoriz, oldVert)
+		onScrollChanged?.invoke()
+	}
+
 	internal lateinit var mScroller: Scroller
 	internal lateinit var mGestureDetector: GestureDetector
 
