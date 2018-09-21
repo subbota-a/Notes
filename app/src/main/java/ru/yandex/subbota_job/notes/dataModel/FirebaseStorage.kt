@@ -4,11 +4,17 @@ import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.Transformations
 import android.util.Log
+import com.google.android.gms.tasks.Continuation
 import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.TaskCompletionSource
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
-data class RemoteSyncInfo(val remoteId:String, val modified:Long)
+open class SyncData(var modified:Long, var deleted:Boolean){
+	constructor(): this(0, false){}
+}
+class RemoteSyncInfo(val remoteId:String, modified:Long, deleted:Boolean) : SyncData(modified, deleted){}
 
 class FirebaseSnapshotLiveData(private val databaseRef: DatabaseReference): LiveData<DataSnapshot>(){
 	private val logTag = "FbSnapshotLiveData"
@@ -43,30 +49,41 @@ class FirebaseStorage() {
 		if (snapshot.exists())
 		{
 			for(x in snapshot.children){
-				ret.add(RemoteSyncInfo(x.key!!, x.getValue(Long::class.java)!!))
+				val sd = x.getValue(SyncData::class.java)!!
+				ret.add(RemoteSyncInfo(x.key!!, sd.modified, sd.deleted))
 			}
 		}
 		ret
 	}
-	fun add(note: Note) : Task<Void> {
-		val ref = database.child("index").push()
-		val key = ref.key
-		note.remoteId = key
-		val data = HashMap<String, Any>()
-		data["index/$key"] = note.modified
-		data["content/$key"] = note
-		return database.updateChildren(data)
-	}
 
-	fun update(note: Note): Task<Void> {
+	fun update(note: Note): Task<Unit> {
 		val key = note.remoteId
-		val data = HashMap<String, Any>()
-		data["index/$key"] = note.modified
+		val data = HashMap<String, Any?>()
+		data["index/$key"] = SyncData(note.modified, note.deleted)
 		data["content/$key"] = note
-		return database.updateChildren(data)
+		return database.updateChildren(data).continueWithTask( Continuation<Void, Task<Unit>> {task: Task<Void> ->
+			if (task.isSuccessful)
+				Tasks.forResult(Unit)
+			else
+				Tasks.forException<Unit>(task.exception!!)
+		})
 	}
 
 	fun getId(): String? {
 		return database.child("index").push().key
+	}
+
+	fun getNote(remoteId: String): Task<Note> {
+		val cs = TaskCompletionSource<Note>()
+		database.child("content").child(remoteId).addListenerForSingleValueEvent(object: ValueEventListener{
+			override fun onCancelled(p0: DatabaseError) {
+				cs.setException(p0.toException())
+			}
+
+			override fun onDataChange(p0: DataSnapshot) {
+				cs.setResult(p0.getValue(Note::class.java))
+			}
+		})
+		return cs.task
 	}
 }

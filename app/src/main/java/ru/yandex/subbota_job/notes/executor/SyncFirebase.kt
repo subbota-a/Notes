@@ -2,6 +2,7 @@ package ru.yandex.subbota_job.notes.executor
 
 import android.arch.lifecycle.*
 import android.os.Looper
+import android.telecom.Call
 import android.util.Log
 import com.google.android.gms.tasks.Continuation
 import com.google.android.gms.tasks.Task
@@ -25,6 +26,7 @@ class ReliableObserver<T>(val data:LiveData<T>, val f: (T?)->Unit){
 }
 class SyncFirebase(val localStorage: LocalDatabase, private val remoteStorage: FirebaseStorage) {
 	private val localDao = localStorage.noteEdition()
+	private val localDao2 = localStorage.noteDescription()
 	private var localSyncData : List<LocalSyncInfo>? = null
 	private var remoteSyncData : List<RemoteSyncInfo>? = null
 	private var stop: Boolean = false
@@ -77,7 +79,6 @@ class SyncFirebase(val localStorage: LocalDatabase, private val remoteStorage: F
 		unsubscribe()
 	}
 	private val pendingTasks = ArrayList<Task<Unit>>()
-	private var testCounter = 0
 	private fun myassert(b:Boolean){
 		if (!b)
 			throw AssertionError()
@@ -88,10 +89,7 @@ class SyncFirebase(val localStorage: LocalDatabase, private val remoteStorage: F
 	}
 	private fun sync()
 	{
-		if (localSyncData!=null && !ensureRemoteIdAssigned())
-			return;
-
-		//myassert(pendingTasks.isEmpty()){"sync on pending tasks not empty"}
+		myassert(pendingTasks.isEmpty()){"sync on pending tasks not empty"}
 
 		if (localSyncData==null || remoteSyncData==null)
 			return // Is not ready yet
@@ -124,69 +122,76 @@ class SyncFirebase(val localStorage: LocalDatabase, private val remoteStorage: F
 		if (pendingTasks.isNotEmpty()){
 			Log.d(logTag, "Wait for pending tasks(${pendingTasks.size})")
 			unsubscribe()
-			Tasks.whenAll(pendingTasks).continueWith(Executors.sequence, Continuation<Void, Unit> { p0 ->
-				localDao.deleteDeletedNotes()
-			}).continueWith(Continuation<Unit, Unit> {
+			Tasks.whenAll(pendingTasks).continueWith(Continuation<Void, Unit> {
 				myassert(Looper.myLooper() == Looper.getMainLooper())
 				this.pendingTasks.clear()
 				Log.d(logTag, "Pending tasks completed")
-				++testCounter
-				if (testCounter<3)
-					subscribe() // the last sentence
+				subscribe() // the last sentence
 			})
 		}
 	}
 
-	private fun ensureRemoteIdAssigned(): Boolean {
-		val assignRemoteId = localSyncData!!.filter { it.remoteId.isNullOrEmpty() }
-		if (assignRemoteId.isNotEmpty()){
-			Executors.sequence.execute{
-				localStorage.beginTransaction()
-				try {
-					for (l in assignRemoteId) {
-						val note = localDao.getNote(l.id)
-						note.remoteId = remoteStorage.getId()
-						localDao.updateNote(note)
-					}
-				}finally {
-					localStorage.endTransaction()
-				}
-			}
-		}
-		return assignRemoteId.isEmpty()
-	}
-
 	private val logTag = "SyncFirebase"
+	private fun addToRemote(local: LocalSyncInfo, iter: Iterator<LocalSyncInfo>) : LocalSyncInfo? {
+		if (!local.deleted) {
+			Log.d(logTag, "addToRemote id=${local.id}")
+			val t = Tasks.call(Executors.sequence, Callable {
+				val note = localDao.getNote(local.id)
+				note.remoteId = remoteStorage.getId()
+				localDao.updateNote(note)
+				note
+			}).continueWithTask(Executors.sequence, Continuation<Note, Task<Unit>>{
+				remoteStorage.update(it.result)
+			})
+			pendingTasks.add(t)
+		}
+		return if (iter.hasNext()) iter.next() else null
+	}
 	private fun updateRemote(remote: RemoteSyncInfo, local: LocalSyncInfo) {
 		Log.d(logTag, "updateRemote ${local.id} -> ${remote.remoteId}")
 		val t = Tasks.call(Executors.sequence, Callable {
-			val note = localDao.getNote(local.id)
-			Tasks.await(remoteStorage.update(note))
-			Log.d(logTag, "updateRemote completed id=${note.id}, remoteId=${note.remoteId}")
-			Unit
+			localDao.getNote(local.id)
+		}).continueWithTask(Executors.sequence, Continuation<Note, Task<Unit>> {
+			remoteStorage.update(it.result)
 		})
 		pendingTasks.add(t)
+		//Log.d(logTag, "updateRemote completed id=${note.id}, remoteId=${note.remoteId}")
+	}
+
+	private fun addToLocal(remote: RemoteSyncInfo, iter: Iterator<RemoteSyncInfo>): RemoteSyncInfo? {
+		if (!remote.deleted) {
+			Log.d(logTag, "addToLocal ${remote.remoteId}")
+			val t = remoteStorage.getNote(remote.remoteId)
+				.continueWith(Executors.sequence, Continuation<Note, Unit>{
+					val note = it.result!!
+					note.deleted = remote.deleted
+					note.modified = remote.modified
+					localDao.insertNote(note)
+					Unit
+				})
+			pendingTasks.add(t)
+		}
+		return if (iter.hasNext()) iter.next() else null
 	}
 
 	private fun updateLocal(local: LocalSyncInfo, remote: RemoteSyncInfo) {
 		Log.d(logTag, "updateLocal ${remote.remoteId} -> ${local.id}")
-	}
-	private fun addToRemote(local: LocalSyncInfo, iter: Iterator<LocalSyncInfo>) : LocalSyncInfo? {
-		Log.d(logTag, "addToRemote id=${local.id}, remoteId=${local.remoteId}")
-		val t = Tasks.call(Executors.sequence, Callable {
-			val note = localDao.getNote(local.id)
-			if (!note.deleted) {
-				Tasks.await(remoteStorage.add(note))
-				localDao.updateNote(note)
-				Log.d(logTag, "addToRemote completed id=${note.id}, remoteId=${note.remoteId}")
-			}
-		})// if node DELETED here is bug, task created, but nothing todo
-		pendingTasks.add(t)
-		return if (iter.hasNext()) iter.next() else null
+		if (remote.deleted) {
+			pendingTasks.add(Tasks.call(Executors.sequence, Callable {
+				localDao2.setNoteDeleted(listOf(local.id), remote.deleted, remote.modified)
+			}))
+		}else{
+			pendingTasks.add(
+				remoteStorage.getNote(remote.remoteId)
+						.continueWith(Executors.sequence, Continuation<Note, Unit>{
+							val note = it.result!!
+							note.deleted = remote.deleted
+							note.modified = remote.modified
+							localDao.updateNote(note)
+							Unit
+						})
+			)
+		}
 	}
 
-	private fun addToLocal(remote: RemoteSyncInfo, iter: Iterator<RemoteSyncInfo>): RemoteSyncInfo? {
-		Log.d(logTag, "addToLocal ${remote.remoteId}")
-		return if (iter.hasNext()) iter.next() else null
-	}
 }

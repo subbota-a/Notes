@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Action Mode -->
     <color name="actionModeStatusBarBackground">#000000</color>
     <color name="actionModeBackground">#ffffff</color>
     <color name="actionModeForeground">#616161</color>
-    <color name="statusBarBackground">#b7493f</color>
-    <color name="toolbarBackground">#f9ed88</color>
-    <color name="toolbarForeground">#000000</color>
-    <color name="colorAccent">#ff4a35</color>
-    <color name="colorNoteItemBackground">#f9ed88</color>
+
+    <color name="primaryColor">#fff59d</color>
+    <color name="primaryLightColor">#ffffcf</color>
+    <color name="primaryDarkColor">#cbc26d</color>
+    <color name="secondaryColor">#d32f2f</color>
+    <color name="secondaryLightColor">#ff6659</color>
+    <color name="secondaryDarkColor">#9a0007</color>
+    <color name="primaryTextColor">#6d4c41</color>
+    <color name="secondaryTextColor">#ffffff</color>
+
+    <color name="colorAccent">#d32f2f</color>
+    <color name="colorNoteItemBackground">#ffffcf</color>
     <color name="colorNoteItemBackgroundSelected">#ffffff</color>
     <color name="colorNoteBackground">#ffffff</color>
+
 </resources>

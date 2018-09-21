@@ -5,13 +5,18 @@ import android.arch.lifecycle.AndroidViewModel
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.Transformations
+import android.arch.persistence.room.Transaction
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.Tasks
 import ru.yandex.subbota_job.notes.dataModel.FirebaseStorage
 import ru.yandex.subbota_job.notes.dataModel.LocalDatabase
 import ru.yandex.subbota_job.notes.dataModel.NoteDescription
 import ru.yandex.subbota_job.notes.executor.Executors
 import ru.yandex.subbota_job.notes.executor.SyncFirebase
 import java.util.*
+import java.util.concurrent.Callable
+import java.util.concurrent.Future
 
 class SelectedItems<T>{
 	private val ids = HashSet<T>()
@@ -51,7 +56,7 @@ class NotesListViewModel(application: Application) : AndroidViewModel(applicatio
 		set(value){
 			_filterString.value = value
 		}
-	val filteredList : LiveData<List<NoteDescription>> = Transformations.switchMap(_filterString) {
+	fun filteredList() : LiveData<List<NoteDescription>> = Transformations.switchMap(_filterString) {
 		f -> if (f.isNullOrEmpty()) notesDao.getAllNoteDescription() else notesDao.getFilteredNoteDescription(f)
 	}
 	val selectedIds = SelectedItems<Long>()
@@ -65,6 +70,20 @@ class NotesListViewModel(application: Application) : AndroidViewModel(applicatio
 		Executors.sequence.execute(){
 			notesDao.setNoteDeleted(ids, delete, Date().time)
 		}
+	}
+	fun saveNotesPositions(notes:List<NoteDescription>): Task<Unit>
+	{
+		return Tasks.call(Executors.sequence, Callable{
+			db.beginTransaction()
+			try {
+				val modified = Date().time
+				for (n in notes)
+					notesDao.updateNotePosition(n.id, n.position, modified)
+				db.setTransactionSuccessful()
+			} finally {
+				db.endTransaction()
+			}
+		})
 	}
 	private val _googleAccount = MutableLiveData<GoogleSignInAccount>()
 	val googleAccount : LiveData<GoogleSignInAccount> get() = _googleAccount

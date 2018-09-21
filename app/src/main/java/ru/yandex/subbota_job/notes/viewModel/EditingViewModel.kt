@@ -11,7 +11,7 @@ class EditingViewModel(application: Application) : AndroidViewModel(application)
 	// data
 	private var snapshotsDao = LocalDatabase.instance(application.applicationContext).snapshots()
 	private var notesDao = LocalDatabase.instance(application.applicationContext).noteEdition()
-	var maxSeqId = 0L
+	var maxSeqId : Long = 0
 	var curSeqId: Long = 0
 	private val _snapshot = MutableLiveData<NoteSnapshot>()
 	val snapshot : LiveData<NoteSnapshot> get() = _snapshot
@@ -21,33 +21,42 @@ class EditingViewModel(application: Application) : AndroidViewModel(application)
 			snapshotsDao.clearAll()
 		}
 	}
-	fun loadNote(id : Long){
-		Executors.sequence.execute(){
-			val note = notesDao.getNote(id)
-			_snapshot.postValue(NoteSnapshot().apply {
-				seqId = 0
-				title = note.title
-				body = note.body
-				scrollPos = note.scrollPos
-				selectionPos = note.selectionPos
-				modified = note.modified
-			})
-		}
-	}
 	fun loadEditing(seqId: Long){
 		Executors.sequence.execute(){
 			_snapshot.postValue(snapshotsDao.getEditing(seqId))
 		}
 	}
-	fun loadDraft(){
+	fun loadDraft(id : Long?){
 		Executors.sequence.execute(){
-			val seqId = snapshotsDao.maxSeqId()
-			_snapshot.postValue(if (seqId != null) snapshotsDao.getEditing(seqId) else null)
+			maxSeqId = snapshotsDao.maxSeqId() ?: -1
+			curSeqId = maxSeqId
+			var s = NoteSnapshot()
+			if (maxSeqId >= 0)
+				s = snapshotsDao.getEditing(maxSeqId)
+			else {
+				maxSeqId = 0
+				curSeqId = maxSeqId
+				if (id != null) {
+					val note = notesDao.getNote(id)
+					s.apply {
+						seqId = curSeqId
+						title = note.title
+						body = note.body
+						scrollPos = note.scrollPos
+						selectionPos = note.selectionPos
+						modified = note.modified
+					}
+				}
+				snapshotsDao.addSnapshot(s)
+			}
+			_snapshot.postValue(s)
 		}
 	}
 	fun addSnapshot(snapshot: NoteSnapshot){
 		snapshot.seqId = ++curSeqId
+		maxSeqId = curSeqId
 		Executors.sequence.execute(){
+			snapshotsDao.deleteSince(snapshot.seqId)
 			snapshotsDao.addSnapshot(snapshot)
 		}
 	}
@@ -58,7 +67,6 @@ class EditingViewModel(application: Application) : AndroidViewModel(application)
 			note.scrollPos = snapshot.scrollPos
 			note.selectionPos = snapshot.selectionPos
 			note.modified = snapshot.modified
-			note.makeTitle()
 		}
 	}
 	fun saveNote(snapshot: NoteSnapshot, id : Long?){

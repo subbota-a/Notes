@@ -6,16 +6,27 @@ import android.content.Context
 import ru.yandex.subbota_job.notes.executor.Executors
 import java.util.*
 
-open class NoteDescription{
-	@PrimaryKey(autoGenerate = true) var id: Long = 0;
-	var title : String = "";
-	var position : Long = 0; // position in list
+open class NoteDescription {
+	@PrimaryKey(autoGenerate = true)
+	var id: Long = 0
+	var title: String = ""
+	var position: Long = 0 // position in list
+	override fun equals(other: Any?): Boolean {
+		if (other == null || other !is NoteDescription)
+			return false
+		return id==other.id && title==other.title && position==other.position
+	}
+
+	override fun hashCode(): Int {
+		return id.hashCode()
+	}
 }
 
 data class LocalSyncInfo(
-		val id:Long,
-		val remoteId:String?,
-		val modified:Long
+	val id:Long,
+	val remoteId:String?,
+	val modified:Long,
+	val deleted: Boolean
 )
 
 @Entity(tableName = "notes")
@@ -45,8 +56,8 @@ interface NoteDescriptionDao {
 	@Query("UPDATE notes SET deleted = :deleted, modified = :modified WHERE id IN(:ids)")
 	fun setNoteDeleted(ids: List<Long>, deleted: Boolean, modified : Long)
 
-	@Query("UPDATE notes SET position=:position WHERE id=:id")
-	fun setPosition(id: Long, position: Long)
+	@Query("UPDATE notes SET position=:position, modified=:modified WHERE id=:id")
+	fun updateNotePosition(id:Long, position:Long, modified:Long)
 }
 
 @Dao
@@ -69,7 +80,7 @@ interface NoteEditionDao{
 	@Query("DELETE FROM notes where deleted!=0")
 	fun deleteDeletedNotes()
 
-	@Query("SELECT id, remoteId, modified FROM notes")
+	@Query("SELECT id, remoteId, modified, deleted FROM notes")
 	fun getSyncInfo() : LiveData<List<LocalSyncInfo>>
 }
 
@@ -90,8 +101,8 @@ interface SnapshotsDao{
 	@Insert
 	fun addSnapshot(snapshots: NoteSnapshot)
 
-	@Query("delete from snapshots where seqId > :seqId")
-	fun deleteAfter(seqId: Long)
+	@Query("delete from snapshots where seqId >= :seqId")
+	fun deleteSince(seqId: Long)
 
 	@Query("select max(seqId) from snapshots")
 	fun maxSeqId(): Long?

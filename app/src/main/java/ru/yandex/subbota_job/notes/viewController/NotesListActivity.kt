@@ -17,10 +17,8 @@ import android.support.v7.widget.RecyclerView
 import android.support.v7.widget.Toolbar
 import android.text.TextUtils
 import android.util.Log
-import android.view.GestureDetector
 import android.view.Menu
 import android.view.MenuItem
-import android.view.MotionEvent
 import android.widget.SearchView
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import ru.yandex.subbota_job.notes.*
@@ -53,7 +51,7 @@ class NotesListActivity : AppCompatActivity() {
 
 		viewModel = of(this).get(NotesListViewModel::class.java)
 
-		mNotesAdaptor = NoteDescriptionListAdapter(this)
+		mNotesAdaptor = NoteDescriptionListAdapter(this, SelectionController()){ addingSuppresed(it)}
 
 		mList = findViewById(R.id.listview)!!
 		mList.layoutManager = LinearLayoutManager(this)
@@ -90,7 +88,6 @@ class NotesListActivity : AppCompatActivity() {
 			}
 		})
 		*/
-		RecyclerViewGestureDetector(this, mList!!, GestureController())
 
 		mNewNote = findViewById(R.id.fab)
 		mNewNote!!.setOnClickListener { editNote(null, false) }
@@ -103,16 +100,15 @@ class NotesListActivity : AppCompatActivity() {
 			val id = getPreferences(Context.MODE_PRIVATE).getLong(KeyEditingId, 0)
 			editNote(if (id==0L) null else id, true)
 		}
-		startImport(false)
 	}
 
 	override fun onSaveInstanceState(outState: Bundle) {
 		super.onSaveInstanceState(outState)
 	}
 
-	internal inner class GestureController : GestureDetector.SimpleOnGestureListener(), ActionMode.Callback {
+	internal inner class SelectionController : ActionMode.Callback, ItemClickListener {
 		private var mActionMode: ActionMode? = null
-		val isSelectionMode: Boolean get() = mActionMode != null
+		private val isSelectionMode: Boolean get() = mActionMode != null
 		init{
 			viewModel.activeMode.observe(this@NotesListActivity, Observer<Boolean>{
 				if (it == isSelectionMode) return@Observer
@@ -123,15 +119,8 @@ class NotesListActivity : AppCompatActivity() {
 			})
 		}
 
-		fun getItemId(e: MotionEvent): Long {
-			val itemView = mList!!.findChildViewUnder(e.x, e.y) ?: return RecyclerView.NO_ID
-			return mList!!.getChildItemId(itemView)
-		}
-
-		override fun onSingleTapUp(e: MotionEvent): Boolean {
-			val id = getItemId(e)
-			if (id == RecyclerView.NO_ID)
-				return false
+		override fun itemTapUp(holder: RecyclerView.ViewHolder): Boolean {
+			val id = holder.itemId
 			if (isSelectionMode)
 				toggleSelection(id)
 			else
@@ -139,14 +128,12 @@ class NotesListActivity : AppCompatActivity() {
 			return true
 		}
 
-		override fun onLongPress(e: MotionEvent) {
-			val id = getItemId(e)
-			if (id == RecyclerView.NO_ID)
-				return
-			toggleSelection(id)
+		override fun itemLongPress(holder: RecyclerView.ViewHolder): Boolean {
+			toggleSelection(holder.itemId)
+			return true
 		}
 
-		fun toggleSelection(id:Long) {
+		private fun toggleSelection(id:Long) {
 			if (!isSelectionMode)
 				beginSelectionMode()
 			viewModel.selectedIds.toggle(id)
@@ -163,7 +150,8 @@ class NotesListActivity : AppCompatActivity() {
 		private fun beginSelectionMode() {
 			mActionMode = startSupportActionMode(this)
 			viewModel.activeMode.value = true
-			mNewNote!!.hide()
+			addingSuppresed(true)
+
 		}
 
 		override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
@@ -188,8 +176,15 @@ class NotesListActivity : AppCompatActivity() {
 			mActionMode = null
 			viewModel.activeMode.value = false
 			viewModel.selectedIds.clear()
-			mNewNote!!.show()
+			addingSuppresed(false)
 		}
+	}
+
+	private fun addingSuppresed(suppress: Boolean){
+		if (suppress)
+			mNewNote!!.hide()
+		else
+			mNewNote!!.show()
 	}
 	private fun softDelete(ids: List<Long>){
 		viewModel.softDelete(ids, true)
@@ -304,6 +299,7 @@ class NotesListActivity : AppCompatActivity() {
 			mSearchView.isIconified = false
 			searchMode = true
 			viewModel.searchMode.value = searchMode
+			addingSuppresed(true)
 		}
 		private fun endSearchMode()
 		{
@@ -311,6 +307,7 @@ class NotesListActivity : AppCompatActivity() {
 			viewModel.filterString = null
 			searchMode = false
 			viewModel.searchMode.value = searchMode
+			addingSuppresed(false)
 		}
 		override fun onMenuItemClick(item: MenuItem): Boolean {
 			// expandActionView is called internally

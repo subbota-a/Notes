@@ -3,19 +3,26 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="ru.yandex.subbota_job.notes.viewController.NoteContentActivity">
     <item
+        android:id="@+id/undo_action"
+        android:title="@string/action_undo"
+        android:icon="@drawable/ic_undo_black_24dp"
+        android:checkable="true"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/redo_action"
+        android:title="@string/redo_action"
+        android:icon="@drawable/redo"
+        app:showAsAction="always"/>
+    <item android:id="@+id/paragraph_align_menu"
+        android:title="@string/paragraph_align_menu"
+        android:icon="@drawable/format_align_left"
+        app:showAsAction="ifRoom"
+        />
+    <item
         android:id="@+id/share_action"
         android:orderInCategory="100"
         android:title="@string/share"
         android:icon="?attr/actionModeShareDrawable"
         app:showAsAction="never"
         app:actionProviderClass="android.support.v7.widget.ShareActionProvider"/>
-    <item
-        android:id="@+id/clear_action"
-        android:title="@string/action_clear"
-        android:icon="@drawable/ic_delete_24dp"
-        app:showAsAction="never"/>
-    <item
-        android:id="@+id/undo_action"
-        android:title="@string/action_undo"
-        android:icon="@drawable/ic_undo_black_24dp"/>
 </menu>

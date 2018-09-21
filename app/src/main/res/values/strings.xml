@@ -27,4 +27,14 @@
     <string name="running_channel_name">running</string>
     <string name="running_channel_description">running long</string>
     <string name="import_in_progress">Импорт заметок</string>
+    <string name="bold_format">Жирный</string>
+    <string name="italic_format">Курсив</string>
+    <string name="underline_format">Подчёркивание</string>
+    <string name="strikethrough_format">Зачёркнутый</string>
+    <string name="color_fill_format">Заливка</string>
+    <string name="color_text_format">Цвет</string>
+    <string name="increase_font_size">Увеличить шрифт</string>
+    <string name="decrease_font_size">Уменьшить шрифт</string>
+    <string name="paragraph_align_menu">Выравнивание текста</string>
+    <string name="redo_action">Повторить</string>
 </resources>
