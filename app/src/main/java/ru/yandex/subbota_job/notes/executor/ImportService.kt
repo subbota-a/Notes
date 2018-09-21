@@ -12,18 +12,14 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.drive.Drive
 import ru.yandex.subbota_job.notes.R
 import ru.yandex.subbota_job.notes.dataModel.DriveStorage
+import ru.yandex.subbota_job.notes.dataModel.FileStorageFactory
+import ru.yandex.subbota_job.notes.dataModel.ImportFactory
 import ru.yandex.subbota_job.notes.dataModel.LocalDatabase
 import ru.yandex.subbota_job.notes.viewController.ConnectionActivity
 import ru.yandex.subbota_job.notes.viewController.NotesListActivity
 
 private const val ACTION_FOO = "ru.yandex.subbota_job.notes.executor.action.IMPORT"
 
-/**
- * An [IntentService] subclass for handling asynchronous task requests in
- * a service on a separate handler thread.
- * TODO: Customize class - update intent actions, extra parameters and static
- * helper methods.
- */
 class ImportService : IntentService("ImportService") {
 
 	@SuppressLint("ApplySharedPref")
@@ -31,15 +27,14 @@ class ImportService : IntentService("ImportService") {
 		createNotificationChannel()
 		beginSyncNotification()
 		try {
-			val account = getAccount(this) ?: throw Exception("Требуется авторизация")
-			if (getSharedPreferences(preferenceName, Context.MODE_PRIVATE).getString(importKey, null) == account.id)
+			if (getFlag(this))
 				return;
-			val externalStorage = DriveStorage(this, account)
+			val externalStorage = importFactory().create(this)
 			val dao = LocalDatabase.instance(this).noteEdition()
 			externalStorage.read(){
 				dao.insertNote(it)
 			}
-			getSharedPreferences(preferenceName, Context.MODE_PRIVATE).edit().putString(importKey, account.id).commit()
+			setFlag(this, true)
 		}catch(e:Exception){
 			makeNotification("Импорт прошёл с ошибками", e.message)
 		}finally {
@@ -104,21 +99,29 @@ class ImportService : IntentService("ImportService") {
 		private val ALARM_CHANNEL_ID = "ru.yandex.subbota_job.alarm_channel_id"
 		private val PLAY_CHANNEL_ID = "ru.yandex.subbota_job.play_channel_id"
 		@JvmStatic
+		fun importFactory() = FileStorageFactory()
+		private fun getFlag(context:Context): Boolean{
+			return context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE).contains(importKey)
+		}
+		private fun setFlag(context: Context, value: Boolean){
+			context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE).edit().let{
+				if (value)
+					it.putBoolean(importKey, value)
+				else
+					it.remove(importKey)
+			}.apply()
+		}
 		fun startImport(context: Context, force:Boolean) {
-			val account = getAccount(context) ?: throw Exception("You must be signed in before calling start import")
 			if (force)
-				context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE).edit().putString(importKey, null).commit()
-			else if (context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE).getString(importKey, null) == account.id)
+				setFlag(context, false)
+			else if (getFlag(context))
 				return;
 			context.startService(Intent(context, ImportService::class.java))
 		}
-		fun getGoogleSignInOptions(): GoogleSignInOptions = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-				.requestScopes(Drive.SCOPE_FILE)
-				.requestId()
-				.requestIdToken("483166223054-s53j4s12ne4udmcu2qhtql0f0s6rb4rn.apps.googleusercontent.com")
-				.build()
-		fun getAccount(context: Context): GoogleSignInAccount? = GoogleSignIn.getLastSignedInAccount(context)?.let{
-			if (it.id != null && it.grantedScopes.contains(Drive.SCOPE_FILE)) it else null
+		fun getGoogleSignInOptions(): GoogleSignInOptions{
+			val b = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+					.requestIdToken("483166223054-s53j4s12ne4udmcu2qhtql0f0s6rb4rn.apps.googleusercontent.com")
+			return importFactory().addAuthOptions(b).build()
 		}
 	}
 }

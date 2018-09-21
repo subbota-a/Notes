@@ -1,8 +1,11 @@
 package ru.yandex.subbota_job.notes.dataModel
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
+import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.Releasable
 import com.google.android.gms.drive.Drive
 import com.google.android.gms.drive.DriveFile
@@ -13,8 +16,30 @@ import com.google.android.gms.drive.query.Query
 import com.google.android.gms.drive.query.SearchableField
 import com.google.android.gms.tasks.Tasks
 import ru.yandex.subbota_job.notes.UtfFile
+import java.lang.Exception
 
-class DriveStorage(val context: Context, val account: GoogleSignInAccount) {
+interface Import{
+	fun read(handler: (Note)->Unit)
+}
+interface ImportFactory{
+	fun classKey() = "importClass"
+
+	fun create(context: Context): Import
+	fun addAuthOptions(options: GoogleSignInOptions.Builder): GoogleSignInOptions.Builder
+}
+class DriveStorageFactory: ImportFactory{
+	override fun create(context: Context): Import {
+		return DriveStorage(context)
+	}
+
+	override fun addAuthOptions(options: GoogleSignInOptions.Builder): GoogleSignInOptions.Builder {
+		return options.requestScopes(Drive.SCOPE_FILE)
+	}
+}
+
+class DriveStorage(val context: Context):Import {
+	val account: GoogleSignInAccount = GoogleSignIn.getLastSignedInAccount(context)?.let{
+		if (it.id != null && it.grantedScopes.contains(Drive.SCOPE_FILE)) it else null} ?: throw Exception("Требуется авторизация")
 	val resourceClient = Drive.getDriveResourceClient(context, account)
 	val customModifiedDate = CustomPropertyKey("NoteModifiedDate", 1)
 	private class Holder<T>(private val mReleasable: Releasable?, private val mObj: T) : Releasable {
@@ -38,7 +63,7 @@ class DriveStorage(val context: Context, val account: GoogleSignInAccount) {
 		result.release()
 		return null
 	}
-	fun read(handler: (Note)->Unit)
+	override fun read(handler: (Note)->Unit)
 	{
 		val notesFolder = getNotesFolder() ?: return
 		try {

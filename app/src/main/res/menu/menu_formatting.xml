@@ -1,0 +1,49 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="ru.yandex.subbota_job.notes.viewController.NoteContentActivity">
+    <group android:id="@+id/char_style_group">
+        <item
+            android:id="@+id/bold_format"
+            android:title="@string/bold_format"
+            android:icon="@drawable/format_bold"
+            app:showAsAction="always"
+            />
+        <item
+            android:id="@+id/italic_format"
+            android:title="@string/italic_format"
+            android:icon="@drawable/format_italic"
+            app:showAsAction="always"
+            />
+        <item
+            android:id="@+id/underline_format"
+            android:title="@string/underline_format"
+            android:icon="@drawable/format_underline"
+            app:showAsAction="always"
+            />
+        <item
+            android:id="@+id/strikethrough_format"
+            android:title="@string/strikethrough_format"
+            android:icon="@drawable/format_strikethrough_variant"
+            app:showAsAction="always"
+            />
+    </group>
+    <group android:id="@+id/char_color_group">
+        <item
+            android:id="@+id/color_text_format"
+            android:title="@string/color_text_format"
+            android:icon="@drawable/format_color_text"
+            app:showAsAction="always"
+            />
+        <item
+            android:id="@+id/color_fill_format"
+            android:title="@string/color_fill_format"
+            android:icon="@drawable/format_color_fill"
+            app:showAsAction="always"
+            />
+    </group>
+    <group android:id="@+id/char_size_group">
+        <item android:id="@+id/increase_font_size" android:title="@string/increase_font_size" android:icon="@drawable/format_font_size_increase" app:showAsAction="always"/>
+        <item android:id="@+id/decrease_font_size" android:title="@string/decrease_font_size" android:icon="@drawable/format_font_size_decrease" app:showAsAction="always"/>
+    </group>
+</menu>

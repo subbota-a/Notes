@@ -1,49 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:id="@+id/coordinatorLayout"
-    tools:context="ru.yandex.subbota_job.notes.viewController.NoteContentActivity"
-    >
+    tools:context="ru.yandex.subbota_job.notes.viewController.NoteContentActivity">
 
-    <android.support.design.widget.AppBarLayout
-        android:id="@+id/app_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        >
-        <android.support.v7.widget.Toolbar
-            android:id="@+id/toolbar"
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        app:navigationIcon="@drawable/check"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="?attr/actionBarTheme"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <EditText
+            android:id="@+id/title_edit"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            >
-            <EditText
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/title_edit"
-                android:inputType="textNoSuggestions|text"
-                android:hint="@string/title_activity_note_content"
-                android:imeOptions="flagNavigateNext"
-                android:gravity="start|center_vertical"
-                android:textAppearance="@style/TextAppearance.AppCompat.Large"
-                android:background="@drawable/note_item_background_selector"
-                android:maxLines="1" />
-            <!--style="@style/ToolbarTitleTextStyle"-->
-            <!--android:background="?android:attr/actionBarItemBackground"-->
-        </android.support.v7.widget.Toolbar>
-    </android.support.design.widget.AppBarLayout>
+            android:layout_height="match_parent"
+            android:background="@null"
+            android:gravity="start|center_vertical"
+            android:hint="@string/title_activity_note_content"
+            android:imeOptions="flagNavigateNext"
+            android:inputType="textNoSuggestions|text"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            tools:layout_editor_absoluteX="72dp" />
+    </android.support.v7.widget.Toolbar>
+
     <ru.yandex.subbota_job.notes.viewController.FlingableEditText
         android:id="@+id/editor"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:background="@null"
         android:gravity="top"
         android:hint="@string/note_hint"
         android:inputType="textMultiLine|textImeMultiLine"
-        android:padding="5dp">
-        <requestFocus />
+        android:padding="5dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/toolbar"
+        app:layout_constraintBottom_toTopOf="@+id/char_style_toolbar"
+        >
+
+        <requestFocus
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
     </ru.yandex.subbota_job.notes.viewController.FlingableEditText>
-</LinearLayout>
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/char_style_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:theme="?attr/actionBarTheme"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        >
+
+    </android.support.v7.widget.Toolbar>
+
+
+</android.support.constraint.ConstraintLayout>
