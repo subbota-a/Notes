@@ -47,7 +47,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/toolbar"
-        app:layout_constraintBottom_toTopOf="@+id/char_style_toolbar"
+        app:layout_constraintBottom_toTopOf="@+id/divider"
         >
 
         <requestFocus
@@ -55,17 +55,29 @@
             android:layout_height="wrap_content" />
     </ru.yandex.subbota_job.notes.viewController.FlingableEditText>
 
-    <android.support.v7.widget.Toolbar
-        android:id="@+id/char_style_toolbar"
+    <View
+        android:layout_height="1dp"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:theme="?attr/actionBarTheme"
+        android:background="#3e3e3e"
+        android:id="@+id/divider"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_toolbar"/>
+
+    <HorizontalScrollView
+        android:id="@+id/bottom_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         >
 
-    </android.support.v7.widget.Toolbar>
-
+        <android.support.v7.widget.ActionMenuView
+            android:id="@+id/char_style_toolbar"
+            android:layout_width="wrap_content"
+            android:layout_height="?attr/actionBarSize"
+            android:theme="?attr/actionBarTheme"
+            android:gravity="center_horizontal|center_vertical"
+            />
+    </HorizontalScrollView>
 
 </android.support.constraint.ConstraintLayout>

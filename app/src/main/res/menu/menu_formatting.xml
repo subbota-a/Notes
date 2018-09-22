@@ -8,6 +8,8 @@
             android:title="@string/bold_format"
             android:icon="@drawable/format_bold"
             app:showAsAction="always"
+            android:checkable="true"
+            android:checked="true"
             />
         <item
             android:id="@+id/italic_format"

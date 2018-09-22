@@ -11,7 +11,7 @@
         <item name="titleTextColor">@color/primaryTextColor</item>
         <item name="actionBarTheme">@style/ActionBarOverlayTheme</item>
         <item name="colorPrimaryDark">@color/primaryDarkColor</item>
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorAccent">@color/secondaryColor</item>
     </style>
     <style name="Theme.AppTheme"></style>
     <style name="ActionBarOverlayTheme" parent="ThemeOverlay.AppCompat.ActionBar">

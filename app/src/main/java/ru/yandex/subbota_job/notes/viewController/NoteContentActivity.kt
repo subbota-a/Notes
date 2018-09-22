@@ -6,12 +6,18 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.StateListDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.support.v4.view.MenuItemCompat
 import android.support.v7.app.ActionBar
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.view.SupportMenuInflater
+import android.support.v7.view.menu.ActionMenuItemView
+import android.support.v7.view.menu.MenuBuilder
+import android.support.v7.widget.ActionMenuView
 import android.support.v7.widget.ShareActionProvider
 import android.support.v7.widget.Toolbar
 import android.text.Editable
@@ -20,6 +26,7 @@ import android.text.Spanned
 import android.text.TextWatcher
 import android.text.style.*
 import android.util.Log
+import android.util.StateSet
 import android.util.TypedValue
 import android.view.*
 import android.widget.EditText
@@ -57,7 +64,7 @@ class NoteContentActivity : AppCompatActivity() {
 	private var needsToSnapshot: Boolean = false
 	private var lastModified: Long = 0
 	private val spannable : SpannableStringBuilder get()= mEdit.text as SpannableStringBuilder
-	private lateinit var mFormatCharToolbar: Toolbar
+	private lateinit var mFormatCharToolbar: ActionMenuView
 
 	private class PendingSaveSnapshot(val activity: WeakReference<NoteContentActivity>, val cancelToken:CancellationToken):Runnable{
 		override fun run() {
@@ -94,10 +101,14 @@ class NoteContentActivity : AppCompatActivity() {
 		mNoteTitle.nextFocusDownId = R.id.editor
 
 		toolbar.setNavigationOnClickListener { saveAndExit() }
-
 		mFormatCharToolbar = findViewById(R.id.char_style_toolbar)
-		mFormatCharToolbar.inflateMenu(R.menu.menu_formatting)
+
+		menuInflater.inflate(R.menu.menu_formatting, mFormatCharToolbar.menu)
+		makePressableItem(mFormatCharToolbar.menu)
 		mFormatCharToolbar.setOnMenuItemClickListener { format(it.itemId) }
+		// test
+		mFormatCharToolbar.menu.findItem(R.id.bold_format).setChecked(true)
+		//mFormatCharToolbar.menu.findItem(R.id.bold_format).icon.state = IntArray(1){android.R.attr.state_pressed}
 
 		initEdit()
 
@@ -114,6 +125,19 @@ class NoteContentActivity : AppCompatActivity() {
 			if (!goOn)
 				viewModel.clearHistory()
 			viewModel.loadDraft(noteId)
+		}
+	}
+
+	private fun makePressableItem(menu: Menu) {
+		val background = resources.getDrawable(R.drawable.active_format_background, theme)
+		val active_state = IntArray(1){android.R.attr.state_checked}
+		for(i in 0 until menu.size()) {
+			var src = menu.getItem(i)!!.icon
+			val active = LayerDrawable(arrayOf(background, src))
+			val state = StateListDrawable()
+			state.addState(active_state, active)
+			state.addState(StateSet.WILD_CARD, src)
+			menu.getItem(i)!!.icon = state
 		}
 	}
 
