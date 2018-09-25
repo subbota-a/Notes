@@ -20,10 +20,7 @@ import android.support.v7.view.menu.MenuBuilder
 import android.support.v7.widget.ActionMenuView
 import android.support.v7.widget.ShareActionProvider
 import android.support.v7.widget.Toolbar
-import android.text.Editable
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.TextWatcher
+import android.text.*
 import android.text.style.*
 import android.util.Log
 import android.util.StateSet
@@ -180,6 +177,7 @@ class NoteContentActivity : AppCompatActivity() {
 	}
 
 	private fun makeSnapshot() : NoteSnapshot{
+		mEdit.clearComposingText()
 		val body = Markup.toString(spannable)
 		return NoteSnapshot(title = mNoteTitle.text.toString(), body = body, selectionPos = mEdit.selectionEnd, scrollPos = mEdit.scrollY, modified = this.lastModified)
 	}
@@ -209,23 +207,7 @@ class NoteContentActivity : AppCompatActivity() {
 		supportFinishAfterTransition()
 	}
 
-	private fun toggleStyle(ss:Int, se:Int, spans: Iterable<CharacterStyle>, style : Lazy<CharacterStyle>){
-		if (!spans.any())
-			spannable.setSpan(style.value, ss, se, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
-		else{
-			for(s in spans){
-				val st = spannable.getSpanStart(s)
-				val en = spannable.getSpanEnd(s)
-				spannable.removeSpan(s)
-				if (st<ss)
-					spannable.setSpan(CharacterStyle.wrap(s), st, ss, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
-				if (se<en)
-					spannable.setSpan(CharacterStyle.wrap(s), se, en, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
-			}
-		}
-		userChanged()
-	}
-	private fun replaceStyle(ss:Int, se:Int, spans: Array<out CharacterStyle>, style : CharacterStyle?)
+	private fun removeCharacterStyleFromRange(ss:Int, se:Int, spans: Iterable<CharacterStyle>)
 	{
 		for(s in spans){
 			val st = spannable.getSpanStart(s)
@@ -236,12 +218,25 @@ class NoteContentActivity : AppCompatActivity() {
 			if (se<en)
 				spannable.setSpan(CharacterStyle.wrap(s), se, en, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
 		}
+	}
+	private fun toggleStyle(ss:Int, se:Int, spans: Iterable<CharacterStyle>, style : Lazy<CharacterStyle>){
+		if (!spans.any())
+			spannable.setSpan(style.value, ss, se, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
+		else
+			removeCharacterStyleFromRange(ss,se,spans)
+		userChanged()
+	}
+	private fun replaceStyle(ss:Int, se:Int, spans: Iterable<CharacterStyle>, style : CharacterStyle?)
+	{
+		removeCharacterStyleFromRange(ss,se,spans)
 		if (style!=null)
 			spannable.setSpan(style, ss, se, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
+		userChanged()
 	}
 	private fun format(menuItemId: Int): Boolean {
 		val ss = mEdit.selectionStart
 		val se = mEdit.selectionEnd
+		mEdit.clearComposingText()
 		when(menuItemId){
 			R.id.bold_format, R.id.italic_format ->{
 				val typeface = when (menuItemId) { R.id.bold_format -> Typeface.BOLD else -> Typeface.ITALIC}
@@ -274,7 +269,7 @@ class NoteContentActivity : AppCompatActivity() {
 					perc -= 0.1f
 				if (perc != 0f)
 					newSpan = RelativeSizeSpan(perc)
-				replaceStyle(ss, se, spans, newSpan)
+				replaceStyle(ss, se, spans.asIterable(), newSpan)
 			}
 			else -> return false
 		}
@@ -403,8 +398,44 @@ class NoteContentActivity : AppCompatActivity() {
 		menu?.findItem(R.id.redo_action)?.icon?.alpha = if (viewModel.curSeqId<viewModel.maxSeqId) 255 else 125
 		return super.onPrepareOptionsMenu(menu)
 	}
+	private fun splitCharacterStyles(ss:Int, se:Int)
+	{
+		for(s in spannable.getSpans(ss,se,CharacterStyle::class.java)){
+			val st = spannable.getSpanStart(s)
+			val en = spannable.getSpanEnd(s)
+			if (st<ss)
+				spannable.setSpan(CharacterStyle.wrap(s), st, ss, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
+			if (se<en)
+				spannable.setSpan(CharacterStyle.wrap(s), se, en, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
+			if (st<ss || se<en){
+				spannable.removeSpan(s)
+				spannable.setSpan(CharacterStyle.wrap(s), ss, se, Spanned.SPAN_EXCLUSIVE_INCLUSIVE)
+			}
+		}
+
+	}
+	private fun<T> replaceParagraphStyle(ss:Int, se:Int, style : ()->T, type: Class<T>){
+		var st = ss
+		while(st > 0 && spannable[st-1]!='\n')
+			--st
+		var en = st
+		do {
+			while (en < spannable.length && spannable[en] != '\n')
+				++en
+			val spans = spannable.getSpans(st, en, type)
+			for (s in spans)
+				spannable.removeSpan(s)
+			splitCharacterStyles(st,en)
+			spannable.setSpan(style(), st, en, Spanned.SPAN_PARAGRAPH)
+			++en
+			st = en
+		}while (st < se)
+		userChanged()
+	}
 
 	override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+		val ss = mEdit.selectionStart
+		val se = mEdit.selectionEnd
 		when(item!!.itemId){
 			R.id.undo_action -> {
 				if (viewModel.curSeqId>0) {
@@ -419,6 +450,9 @@ class NoteContentActivity : AppCompatActivity() {
 					viewModel.loadEditing(viewModel.curSeqId + 1)
 				return true
 			}
+			R.id.format_align_left -> replaceParagraphStyle(ss, se, {AlignmentSpan.Standard(Layout.Alignment.ALIGN_NORMAL)}, AlignmentSpan::class.java)
+			R.id.format_align_center -> replaceParagraphStyle(ss, se, {AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER)}, AlignmentSpan::class.java)
+			R.id.format_align_right -> replaceParagraphStyle(ss, se, {AlignmentSpan.Standard(Layout.Alignment.ALIGN_OPPOSITE)}, AlignmentSpan::class.java)
 		}
 		return super.onOptionsItemSelected(item)
 	}

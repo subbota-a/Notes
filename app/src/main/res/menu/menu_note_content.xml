@@ -16,8 +16,14 @@
     <item android:id="@+id/paragraph_align_menu"
         android:title="@string/paragraph_align_menu"
         android:icon="@drawable/format_align_left"
-        app:showAsAction="ifRoom"
-        />
+        app:showAsAction="always"
+        >
+        <menu>
+            <item android:id="@+id/format_align_left" android:title="@string/format_aling_left" android:icon="@drawable/format_align_left"/>
+            <item android:id="@+id/format_align_center" android:title="@string/format_align_center" android:icon="@drawable/format_align_center"/>
+            <item android:id="@+id/format_align_right" android:title="@string/format_align_right" android:icon="@drawable/format_align_right"/>
+        </menu>
+    </item>
     <item
         android:id="@+id/share_action"
         android:orderInCategory="100"

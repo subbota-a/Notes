@@ -37,4 +37,7 @@
     <string name="decrease_font_size">Уменьшить шрифт</string>
     <string name="paragraph_align_menu">Выравнивание текста</string>
     <string name="redo_action">Повторить</string>
+    <string name="format_aling_left">Выровнять влево</string>
+    <string name="format_align_center">Выровнять по центу</string>
+    <string name="format_align_right">Выровнять вправо</string>
 </resources>
