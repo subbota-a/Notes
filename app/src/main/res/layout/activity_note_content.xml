@@ -42,7 +42,7 @@
         android:background="@null"
         android:gravity="top"
         android:hint="@string/note_hint"
-        android:inputType="textMultiLine|textImeMultiLine"
+        android:inputType="textMultiLine|textImeMultiLine|textNoSuggestions"
         android:padding="5dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
