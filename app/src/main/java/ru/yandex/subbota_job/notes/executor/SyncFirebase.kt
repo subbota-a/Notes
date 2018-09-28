@@ -1,8 +1,7 @@
 package ru.yandex.subbota_job.notes.executor
 
-import android.arch.lifecycle.*
+import androidx.lifecycle.*
 import android.os.Looper
-import android.telecom.Call
 import android.util.Log
 import com.google.android.gms.tasks.Continuation
 import com.google.android.gms.tasks.Task

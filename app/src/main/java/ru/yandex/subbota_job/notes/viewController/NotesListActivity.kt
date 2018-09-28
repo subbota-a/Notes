@@ -1,20 +1,20 @@
 package ru.yandex.subbota_job.notes.viewController
 
-import android.arch.lifecycle.Observer
-import android.arch.lifecycle.ViewModelProviders.*
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders.*
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.support.design.widget.FloatingActionButton
-import android.support.design.widget.Snackbar
-import android.support.v4.app.ActivityCompat
-import android.support.v4.app.ActivityOptionsCompat
-import android.support.v7.app.AppCompatActivity
-import android.support.v7.view.ActionMode
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
-import android.support.v7.widget.Toolbar
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.snackbar.Snackbar
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityOptionsCompat
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.appcompat.widget.Toolbar
 import android.text.TextUtils
 import android.util.Log
 import android.view.Menu
@@ -29,14 +29,12 @@ import com.google.firebase.auth.FirebaseAuth
 
 class NotesListActivity : AppCompatActivity() {
 	private lateinit var mNotesAdaptor: NoteDescriptionListAdapter
-	private lateinit var mList: RecyclerView
+	private lateinit var mList: androidx.recyclerview.widget.RecyclerView
 	private var mNewNote: FloatingActionButton? = null
 	//private var mFilterString: String? = null
 	private var editedFile: String? = null
 
 	private lateinit var viewModel: NotesListViewModel
-
-	private lateinit var signInClient: GoogleSignInClient
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -54,7 +52,7 @@ class NotesListActivity : AppCompatActivity() {
 		mNotesAdaptor = NoteDescriptionListAdapter(this, SelectionController()){ addingSuppresed(it)}
 
 		mList = findViewById(R.id.listview)!!
-		mList.layoutManager = LinearLayoutManager(this)
+		mList.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
 		mList.adapter = mNotesAdaptor
 
 		if (!TextUtils.isEmpty(editedFile)) {
@@ -119,7 +117,7 @@ class NotesListActivity : AppCompatActivity() {
 			})
 		}
 
-		override fun itemTapUp(holder: RecyclerView.ViewHolder): Boolean {
+		override fun itemTapUp(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder): Boolean {
 			val id = holder.itemId
 			if (isSelectionMode)
 				toggleSelection(id)
@@ -128,7 +126,7 @@ class NotesListActivity : AppCompatActivity() {
 			return true
 		}
 
-		override fun itemLongPress(holder: RecyclerView.ViewHolder): Boolean {
+		override fun itemLongPress(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder): Boolean {
 			toggleSelection(holder.itemId)
 			return true
 		}

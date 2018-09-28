@@ -1,20 +1,14 @@
 package ru.yandex.subbota_job.notes.viewController
 
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
-import android.content.IntentSender
-import android.support.v7.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import ru.yandex.subbota_job.notes.executor.ImportService
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import android.support.design.widget.Snackbar
-import com.google.android.gms.tasks.Task
-import android.support.annotation.NonNull
+import androidx.annotation.NonNull
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.auth.*
 

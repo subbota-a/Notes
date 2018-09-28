@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/content"
@@ -8,7 +8,7 @@
     android:fitsSystemWindows="true"
     tools:context="ru.yandex.subbota_job.notes.viewController.NoteContentActivity">
 
-    <android.support.v7.widget.Toolbar
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         app:navigationIcon="@drawable/check"
         android:layout_width="0dp"
@@ -33,7 +33,7 @@
             android:singleLine="true"
             android:textAppearance="@style/TextAppearance.AppCompat.Large"
             tools:layout_editor_absoluteX="72dp" />
-    </android.support.v7.widget.Toolbar>
+    </androidx.appcompat.widget.Toolbar>
 
     <ru.yandex.subbota_job.notes.viewController.FlingableEditText
         android:id="@+id/editor"
@@ -42,13 +42,12 @@
         android:background="@null"
         android:gravity="top"
         android:hint="@string/note_hint"
-        android:inputType="textMultiLine|textImeMultiLine|textNoSuggestions"
+        android:inputType="text|textMultiLine"
         android:padding="5dp"
+        app:layout_constraintBottom_toTopOf="@+id/divider"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/toolbar"
-        app:layout_constraintBottom_toTopOf="@+id/divider"
-        >
+        app:layout_constraintTop_toBottomOf="@+id/toolbar">
 
         <requestFocus
             android:layout_width="wrap_content"
@@ -71,7 +70,7 @@
         app:layout_constraintStart_toStartOf="parent"
         >
 
-        <android.support.v7.widget.ActionMenuView
+        <androidx.appcompat.widget.ActionMenuView
             android:id="@+id/char_style_toolbar"
             android:layout_width="wrap_content"
             android:layout_height="?attr/actionBarSize"
@@ -80,4 +79,4 @@
             />
     </HorizontalScrollView>
 
-</android.support.constraint.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
