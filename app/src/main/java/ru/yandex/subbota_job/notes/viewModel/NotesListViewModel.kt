@@ -1,11 +1,11 @@
 package ru.yandex.subbota_job.notes.viewModel
 
 import android.app.Application
-import android.arch.lifecycle.AndroidViewModel
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.MutableLiveData
-import android.arch.lifecycle.Transformations
-import android.arch.persistence.room.Transaction
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Transformations
+import androidx.room.Transaction
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
@@ -16,7 +16,6 @@ import ru.yandex.subbota_job.notes.executor.Executors
 import ru.yandex.subbota_job.notes.executor.SyncFirebase
 import java.util.*
 import java.util.concurrent.Callable
-import java.util.concurrent.Future
 
 class SelectedItems<T>{
 	private val ids = HashSet<T>()

@@ -13,22 +13,11 @@
         android:title="@string/redo_action"
         android:icon="@drawable/redo"
         app:showAsAction="always"/>
-    <item android:id="@+id/paragraph_align_menu"
-        android:title="@string/paragraph_align_menu"
-        android:icon="@drawable/format_align_left"
-        app:showAsAction="always"
-        >
-        <menu>
-            <item android:id="@+id/format_align_left" android:title="@string/format_aling_left" android:icon="@drawable/format_align_left"/>
-            <item android:id="@+id/format_align_center" android:title="@string/format_align_center" android:icon="@drawable/format_align_center"/>
-            <item android:id="@+id/format_align_right" android:title="@string/format_align_right" android:icon="@drawable/format_align_right"/>
-        </menu>
-    </item>
     <item
         android:id="@+id/share_action"
         android:orderInCategory="100"
         android:title="@string/share"
         android:icon="?attr/actionModeShareDrawable"
         app:showAsAction="never"
-        app:actionProviderClass="android.support.v7.widget.ShareActionProvider"/>
+        app:actionProviderClass="androidx.appcompat.widget.ShareActionProvider"/>
 </menu>

@@ -1,10 +1,8 @@
 package ru.yandex.subbota_job.notes.dataModel
 
-import android.arch.lifecycle.LiveData
-import android.arch.persistence.room.*
+import androidx.lifecycle.LiveData
+import androidx.room.*
 import android.content.Context
-import ru.yandex.subbota_job.notes.executor.Executors
-import java.util.*
 
 open class NoteDescription {
 	@PrimaryKey(autoGenerate = true)

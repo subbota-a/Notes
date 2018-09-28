@@ -5,17 +5,11 @@ import android.app.*
 import android.content.Intent
 import android.content.Context
 import android.os.Build
-import android.support.v4.app.NotificationCompat
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import androidx.core.app.NotificationCompat
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.drive.Drive
 import ru.yandex.subbota_job.notes.R
-import ru.yandex.subbota_job.notes.dataModel.DriveStorage
 import ru.yandex.subbota_job.notes.dataModel.FileStorageFactory
-import ru.yandex.subbota_job.notes.dataModel.ImportFactory
 import ru.yandex.subbota_job.notes.dataModel.LocalDatabase
-import ru.yandex.subbota_job.notes.viewController.ConnectionActivity
 import ru.yandex.subbota_job.notes.viewController.NotesListActivity
 
 private const val ACTION_FOO = "ru.yandex.subbota_job.notes.executor.action.IMPORT"
