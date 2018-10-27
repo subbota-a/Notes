@@ -140,7 +140,7 @@ class SyncFirebase(val localStorage: LocalDatabase, private val remoteStorage: F
 				localDao.updateNote(note)
 				note
 			}).continueWithTask(Executors.sequence, Continuation<Note, Task<Unit>>{
-				remoteStorage.update(it.result)
+				remoteStorage.update(it.result!!)
 			})
 			pendingTasks.add(t)
 		}
@@ -151,7 +151,7 @@ class SyncFirebase(val localStorage: LocalDatabase, private val remoteStorage: F
 		val t = Tasks.call(Executors.sequence, Callable {
 			localDao.getNote(local.id)
 		}).continueWithTask(Executors.sequence, Continuation<Note, Task<Unit>> {
-			remoteStorage.update(it.result)
+			remoteStorage.update(it.result!!)
 		})
 		pendingTasks.add(t)
 		//Log.d(logTag, "updateRemote completed id=${note.id}, remoteId=${note.remoteId}")

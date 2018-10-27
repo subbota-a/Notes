@@ -332,8 +332,6 @@ class NoteContentActivity : AppCompatActivity() {
 	}
 
 	override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-		val ss = mEdit.selectionStart
-		val se = mEdit.selectionEnd
 		when(item!!.itemId){
 			R.id.undo_action -> {
 				if (viewModel.curSeqId>0) {

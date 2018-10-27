@@ -27,7 +27,7 @@ class ConnectionActivity : AppCompatActivity() {
 				Log.d("ConnectionActivity", "Google sign in ${task.isSuccessful}")
 				if (task.isSuccessful)
 				{
-					val account = task.getResult(ApiException::class.java)
+					val account = task.getResult(ApiException::class.java)!!
 					firebaseAuthWithGoogle(account)
 				}else
 					finish()
