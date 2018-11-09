@@ -9,11 +9,17 @@ import androidx.room.Transaction
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
+import io.reactivex.Completable
+import io.reactivex.Scheduler
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.functions.Action
+import io.reactivex.schedulers.Schedulers
 import ru.yandex.subbota_job.notes.dataModel.FirebaseStorage
 import ru.yandex.subbota_job.notes.dataModel.LocalDatabase
 import ru.yandex.subbota_job.notes.dataModel.NoteDescription
 import ru.yandex.subbota_job.notes.executor.Executors
 import ru.yandex.subbota_job.notes.executor.SyncFirebase
+import java.lang.Exception
 import java.util.*
 import java.util.concurrent.Callable
 
@@ -45,6 +51,7 @@ class SelectedItems<T>{
 			throwChanged()
 		}
 }
+data class DeleteResult(val ids:List<Long>, val delete:Boolean, val throwable: Throwable?)
 
 class NotesListViewModel(application: Application) : AndroidViewModel(application) {
 	private val db = LocalDatabase.instance(application.applicationContext)
@@ -62,13 +69,18 @@ class NotesListViewModel(application: Application) : AndroidViewModel(applicatio
 
 	var activeMode = MutableLiveData<Boolean>().apply { value = false }
 	var searchMode = MutableLiveData<Boolean>().apply { value = false }
-	var undoSnackbar = MutableLiveData<List<Long>>()
+	private val _deleteResult = MutableLiveData<Event<DeleteResult>>()
+	val deleteResult : LiveData<Event<DeleteResult>> get() = _deleteResult
 
 	fun softDelete(ids: List<Long>, delete: Boolean)
 	{
-		Executors.sequence.execute(){
+		Completable.fromAction {
 			notesDao.setNoteDeleted(ids, delete, Date().time)
-		}
+		}.subscribeOn(Schedulers.io())
+		.observeOn(AndroidSchedulers.mainThread())
+		.subscribe(
+				{ _deleteResult.value = Event(DeleteResult(ids, delete,null)) }
+				, {throwable -> _deleteResult.value = Event(DeleteResult(ids, delete, throwable)) })
 	}
 	fun saveNotesPositions(notes:List<NoteDescription>): Task<Unit>
 	{

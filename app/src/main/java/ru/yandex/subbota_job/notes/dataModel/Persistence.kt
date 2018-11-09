@@ -3,6 +3,8 @@ package ru.yandex.subbota_job.notes.dataModel
 import androidx.lifecycle.LiveData
 import androidx.room.*
 import android.content.Context
+import io.reactivex.Flowable
+import io.reactivex.Observable
 
 open class NoteDescription {
 	@PrimaryKey(autoGenerate = true)
@@ -79,7 +81,7 @@ interface NoteEditionDao{
 	fun deleteDeletedNotes()
 
 	@Query("SELECT id, remoteId, modified, deleted FROM notes")
-	fun getSyncInfo() : LiveData<List<LocalSyncInfo>>
+	fun getSyncInfo() : Flowable<List<LocalSyncInfo>>
 }
 
 @Entity(tableName = "snapshots")

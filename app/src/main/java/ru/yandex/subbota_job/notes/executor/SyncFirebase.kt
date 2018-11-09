@@ -3,9 +3,15 @@ package ru.yandex.subbota_job.notes.executor
 import androidx.lifecycle.*
 import android.os.Looper
 import android.util.Log
+import androidx.lifecycle.Observer
 import com.google.android.gms.tasks.Continuation
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
+import io.reactivex.*
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.Disposable
+import io.reactivex.functions.BiFunction
+import io.reactivex.schedulers.Schedulers
 import ru.yandex.subbota_job.notes.dataModel.*
 import java.util.concurrent.Callable
 
@@ -23,54 +29,88 @@ class ReliableObserver<T>(val data:LiveData<T>, val f: (T?)->Unit){
 		data.removeObserver(observer)
 	}
 }
+
+fun <T> next(i: Iterator<T>) : T? = if (i.hasNext()) i.next() else null
+
+fun getModifications(localSyncData:List<LocalSyncInfo>, remoteSyncData:List<RemoteSyncInfo>) =
+		Flowable.create<Pair<LocalSyncInfo?, RemoteSyncInfo?>>({emitter ->
+			val localIter = localSyncData.sortedBy {it.remoteId}.iterator()
+			val remoteIter = remoteSyncData.sortedBy { it.remoteId }.iterator()
+			var local = next(localIter)
+			var remote  = next(remoteIter)
+			while(!emitter.isCancelled && (local != null || remote != null)){
+				if (local == null) {
+					emitter.onNext(Pair(null, remote))
+					remote = next(remoteIter)
+				}else if (remote == null) {
+					emitter.onNext(Pair(local, null))
+					local = next(localIter)
+				}else if (local.remoteId == null || local.remoteId!! < remote.remoteId) {
+					emitter.onNext(Pair(local, null))
+					local = next(localIter)
+				}else if (local.remoteId!! > remote.remoteId) {
+					emitter.onNext(Pair(null, remote))
+					remote = next(remoteIter)
+				}else {
+					if (local.modified != remote.modified)
+						emitter.onNext(Pair(local, remote))
+					local = next(localIter)
+					remote = next(remoteIter)
+				}
+			}
+			emitter.onComplete()
+		}, BackpressureStrategy.BUFFER)
+
 class SyncFirebase(val localStorage: LocalDatabase, private val remoteStorage: FirebaseStorage) {
 	private val localDao = localStorage.noteEdition()
 	private val localDao2 = localStorage.noteDescription()
-	private var localSyncData : List<LocalSyncInfo>? = null
-	private var remoteSyncData : List<RemoteSyncInfo>? = null
 	private var stop: Boolean = false
-	private var subscribed = false
-	private var remoteObserver: ReliableObserver<List<RemoteSyncInfo>>? = null
-	private var localObserver: ReliableObserver<List<LocalSyncInfo>>? = null
+	private var subscribed : Disposable? = null
 
 	init{
 		subscribe()
-	}
-	private fun onLocalChanged(it : List<LocalSyncInfo>?)
-	{
-		Log.d(logTag, "Local storage changed (${it?.size})")
-		myassert(subscribed)
-		localSyncData = it
-		sync()
-	}
-	private fun onRemoteChanged(it : List<RemoteSyncInfo>?)
-	{
-		Log.d(logTag, "Remote storage changed (${it?.size})")
-		myassert(subscribed)
-		remoteSyncData = it
-		sync()
 	}
 	private fun subscribe()
 	{
 		if (stop)
 			return
 		Log.d(logTag, "subscribe")
-		subscribed = true
-		// callback called synchronously!
-		remoteObserver = ReliableObserver(remoteStorage.syncData()){ onRemoteChanged(it)}
-		localObserver = ReliableObserver(localDao.getSyncInfo()){ onLocalChanged(it)}
+		subscribed = Flowable.combineLatest(localDao.getSyncInfo(), remoteStorage.syncData(), BiFunction { t1:List<LocalSyncInfo>, t2:List<RemoteSyncInfo> -> Pair(t1,t2) })
+				.subscribeOn(Schedulers.computation())
+				.onBackpressureBuffer(1, { }, BackpressureOverflowStrategy.DROP_OLDEST)
+				.concatMap {
+					getModifications(it.first, it.second)
+					.subscribeOn(Schedulers.io())
+					.map{
+						myassert(it.first!=null || it.second!=null)
+						if (it.first == null){
+							addToLocal(it.second!!)
+						}else if (it.second == null){
+							addToRemote(it.first!!)
+						}else{
+							if (it.first!!.modified < it.second!!.modified)
+								updateLocal(it.first!!, it.second!!)
+							else if (it.first!!.modified > it.second!!.modified)
+								updateRemote(it.second!!, it.first!!)
+							else
+								Completable.complete()
+						}
+					}.concatMap{ it.toFlowable<Unit>() }
+					.materialize()
+					.filter{ it.isOnError }
+					.map{ it.error!! }
+				}
+				.onBackpressureLatest()
+				.observeOn(AndroidSchedulers.mainThread(), false, 1)
+				.subscribe{
+					Log.d(logTag, it.localizedMessage)
+				}
 	}
 	private fun unsubscribe()
 	{
 		Log.d(logTag, "unsubscribe")
-		subscribed = false
-		remoteObserver?.stop()
-		remoteObserver = null
-		remoteSyncData = null
-
-		localObserver?.stop()
-		localObserver = null
-		localSyncData =  null
+		subscribed?.dispose()
+		subscribed = null
 	}
 	fun release()
 	{
@@ -88,108 +128,74 @@ class SyncFirebase(val localStorage: LocalDatabase, private val remoteStorage: F
 	}
 	private fun sync()
 	{
+		myassert(Looper.myLooper() != Looper.getMainLooper())
 		myassert(pendingTasks.isEmpty()){"sync on pending tasks not empty"}
 
-		if (localSyncData==null || remoteSyncData==null)
-			return // Is not ready yet
-
-		Log.d(logTag, "local size = ${localSyncData!!.size}, remote size = ${remoteSyncData!!.size}")
-		val localIter = localSyncData!!.sortedBy {it.remoteId}.iterator()
-		val remoteIter = remoteSyncData!!.sortedBy { it.remoteId }.iterator()
-		var local = if (localIter.hasNext()) localIter.next() else null
-		var remote  = if (remoteIter.hasNext()) remoteIter.next() else null
-		while(local != null || remote != null){
-			if (local == null)
-				remote = addToLocal(remote!!, remoteIter)
-			else if (remote == null)
-				local = addToRemote(local, localIter)
-			else if (local.remoteId == null || local.remoteId!! < remote.remoteId)
-				local = addToRemote(local, localIter)
-			else if (local.remoteId!! > remote.remoteId)
-				remote = addToLocal(remote, remoteIter)
-			else {
-				if (local.modified < remote.modified)
-					updateLocal(local, remote)
-				else if (local.modified > remote.modified)
-					updateRemote(remote, local)
-				else
-					Log.d(logTag, "items are equal ${remote.remoteId}")
-				local = if (localIter.hasNext()) localIter.next() else null
-				remote = if (remoteIter.hasNext()) remoteIter.next() else null
-			}
-		}
 		if (pendingTasks.isNotEmpty()){
 			Log.d(logTag, "Wait for pending tasks(${pendingTasks.size})")
 			unsubscribe()
-			Tasks.whenAll(pendingTasks).continueWith(Continuation<Void, Unit> {
-				myassert(Looper.myLooper() == Looper.getMainLooper())
+			Tasks.whenAll(pendingTasks).continueWith {
 				this.pendingTasks.clear()
 				Log.d(logTag, "Pending tasks completed")
 				subscribe() // the last sentence
-			})
+			}
 		}
 	}
 
 	private val logTag = "SyncFirebase"
-	private fun addToRemote(local: LocalSyncInfo, iter: Iterator<LocalSyncInfo>) : LocalSyncInfo? {
+
+	private fun addToRemote(local: LocalSyncInfo) : Completable{
+		Log.d(logTag, "addToRemote id=${local.id}, deleted=${local.deleted}")
 		if (!local.deleted) {
-			Log.d(logTag, "addToRemote id=${local.id}")
-			val t = Tasks.call(Executors.sequence, Callable {
-				val note = localDao.getNote(local.id)
-				note.remoteId = remoteStorage.getId()
-				localDao.updateNote(note)
-				note
-			}).continueWithTask(Executors.sequence, Continuation<Note, Task<Unit>>{
-				remoteStorage.update(it.result!!)
-			})
-			pendingTasks.add(t)
+			return Single.fromCallable{localDao.getNote(local.id)}
+					.observeOn(Schedulers.io())
+					.flatMapCompletable { note ->
+						if (note.remoteId == null) {
+							note.remoteId = remoteStorage.getId()
+							Completable.fromAction(){
+								localDao.updateNote(note)
+							}
+						}else
+							 remoteStorage.update(note)
+					}
+		}else {
+			return Completable.complete()
 		}
-		return if (iter.hasNext()) iter.next() else null
 	}
-	private fun updateRemote(remote: RemoteSyncInfo, local: LocalSyncInfo) {
-		Log.d(logTag, "updateRemote ${local.id} -> ${remote.remoteId}")
-		val t = Tasks.call(Executors.sequence, Callable {
-			localDao.getNote(local.id)
-		}).continueWithTask(Executors.sequence, Continuation<Note, Task<Unit>> {
-			remoteStorage.update(it.result!!)
-		})
-		pendingTasks.add(t)
-		//Log.d(logTag, "updateRemote completed id=${note.id}, remoteId=${note.remoteId}")
+	private fun addToLocal(remote: RemoteSyncInfo): Completable{
+		Log.d(logTag, "addToLocal ${remote.remoteId}, deleted=${remote.deleted}")
+		if (!remote.deleted) {
+			return remoteStorage.getNote(remote.remoteId)
+					.observeOn(Schedulers.io())
+					.flatMapCompletable {note ->
+						note.deleted = remote.deleted
+						note.modified = remote.modified
+						Completable.fromAction { localDao.insertNote(note) }
+					}
+		}else
+			return Completable.complete()
+	}
+	private fun updateRemote(remote: RemoteSyncInfo, local: LocalSyncInfo): Completable {
+		Log.d(logTag, "updateRemote ${local.remoteId} -> ${remote.remoteId}")
+		return Single.fromCallable { localDao.getNote(local.id) }
+				.observeOn(Schedulers.io())
+				.flatMapCompletable{ node -> remoteStorage.update(node) }
 	}
 
-	private fun addToLocal(remote: RemoteSyncInfo, iter: Iterator<RemoteSyncInfo>): RemoteSyncInfo? {
-		if (!remote.deleted) {
-			Log.d(logTag, "addToLocal ${remote.remoteId}")
-			val t = remoteStorage.getNote(remote.remoteId)
-				.continueWith(Executors.sequence, Continuation<Note, Unit>{
-					val note = it.result!!
+	private fun updateLocal(local: LocalSyncInfo, remote: RemoteSyncInfo):Completable {
+		Log.d(logTag, "updateLocal ${remote.remoteId} -> ${local.remoteId}")
+		if (remote.deleted) {
+			return Completable.fromAction{
+				localDao2.setNoteDeleted(listOf(local.id), remote.deleted, remote.modified)
+			}.observeOn(Schedulers.io())
+		}else{
+			return remoteStorage.getNote(remote.remoteId)
+				.observeOn(Schedulers.io())
+				.flatMapCompletable{ note ->
 					note.deleted = remote.deleted
 					note.modified = remote.modified
-					localDao.insertNote(note)
-					Unit
-				})
-			pendingTasks.add(t)
-		}
-		return if (iter.hasNext()) iter.next() else null
-	}
-
-	private fun updateLocal(local: LocalSyncInfo, remote: RemoteSyncInfo) {
-		Log.d(logTag, "updateLocal ${remote.remoteId} -> ${local.id}")
-		if (remote.deleted) {
-			pendingTasks.add(Tasks.call(Executors.sequence, Callable {
-				localDao2.setNoteDeleted(listOf(local.id), remote.deleted, remote.modified)
-			}))
-		}else{
-			pendingTasks.add(
-				remoteStorage.getNote(remote.remoteId)
-						.continueWith(Executors.sequence, Continuation<Note, Unit>{
-							val note = it.result!!
-							note.deleted = remote.deleted
-							note.modified = remote.modified
-							localDao.updateNote(note)
-							Unit
-						})
-			)
+					Completable.fromAction{localDao.updateNote(note)}
+				}
 		}
 	}
 

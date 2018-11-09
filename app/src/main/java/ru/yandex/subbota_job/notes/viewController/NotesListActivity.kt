@@ -20,11 +20,14 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.SearchView
+import android.widget.Toast
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import ru.yandex.subbota_job.notes.*
 import ru.yandex.subbota_job.notes.executor.ImportService
 import ru.yandex.subbota_job.notes.viewModel.NotesListViewModel
 import com.google.firebase.auth.FirebaseAuth
+import ru.yandex.subbota_job.notes.viewModel.DeleteResult
+import ru.yandex.subbota_job.notes.viewModel.EventObserver
 
 
 class NotesListActivity : AppCompatActivity() {
@@ -49,7 +52,8 @@ class NotesListActivity : AppCompatActivity() {
 
 		viewModel = of(this).get(NotesListViewModel::class.java)
 
-		mNotesAdaptor = NoteDescriptionListAdapter(this, SelectionController()){ addingSuppresed(it)}
+		val selectionController = SelectionController()
+		mNotesAdaptor = NoteDescriptionListAdapter(this, selectionController){ addingSuppresed(it)}
 
 		mList = findViewById(R.id.listview)!!
 		mList.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
@@ -60,39 +64,23 @@ class NotesListActivity : AppCompatActivity() {
 				postponeEnterTransition()
 			}
 		}
-		/*
-		mNotesAdaptor!!.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-			override fun onChanged() {
-				super.onChanged()
-				//                mNotesAdaptor.unregisterAdapterDataObserver(this);
-				if (!TextUtils.isEmpty(editedFile))
-					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-						startPostponedEnterTransition()
-					}
-				val m = mList!!.layoutManager as LinearLayoutManager
-				val pos1 = m.findFirstCompletelyVisibleItemPosition()
-				val pos2 = m.findLastCompletelyVisibleItemPosition()
-				Log.d("onChanged", String.format("%d,%d", pos1, pos2))
-				var i = 0
-				while (i < mNotesAdaptor!!.itemCount && !TextUtils.isEmpty(editedFile)) {
-					if (mNotesAdaptor!!.getItem(i).mFileName!!.name == editedFile) {
-						if (i < pos1 || i > pos2)
-							m.scrollToPosition(i)
-						break
-					}
-					++i
-				}
-				editedFile = null
-			}
-		})
-		*/
-
 		mNewNote = findViewById(R.id.fab)
 		mNewNote!!.setOnClickListener { editNote(null, false) }
 
-		viewModel.undoSnackbar.observe(this, Observer {
-			if (it != null && !it.isEmpty())
-				showUndoDeleteSnackbar(it)
+		viewModel.deleteResult.observe(this, EventObserver {deleteResult ->
+			if (deleteResult == null) return@EventObserver
+			if (deleteResult.throwable != null)
+				Toast.makeText(applicationContext, deleteResult.throwable.localizedMessage, Toast.LENGTH_LONG).show()
+			else {
+				if (deleteResult.delete) {
+					val message = getString(R.string.removed_notes_message, deleteResult.ids.size)
+					val snackbar = Snackbar.make(findViewById(R.id.coordinatorLayout), message, Snackbar.LENGTH_LONG)
+					snackbar.setAction(R.string.undo) {
+						viewModel.softDelete(deleteResult.ids, false)
+					}
+					snackbar.show()
+				}
+			}
 		})
 		if (getPreferences(Context.MODE_PRIVATE).contains(KeyEditingId)) {
 			val id = getPreferences(Context.MODE_PRIVATE).getLong(KeyEditingId, 0)
@@ -141,15 +129,14 @@ class NotesListActivity : AppCompatActivity() {
 				endSelectionMode()
 		}
 
-		private fun endSelectionMode() {
-			mActionMode!!.finish()
+		fun endSelectionMode() {
+			mActionMode?.finish()
 		}
 
 		private fun beginSelectionMode() {
 			mActionMode = startSupportActionMode(this)
 			viewModel.activeMode.value = true
 			addingSuppresed(true)
-
 		}
 
 		override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
@@ -186,22 +173,6 @@ class NotesListActivity : AppCompatActivity() {
 	}
 	private fun softDelete(ids: List<Long>){
 		viewModel.softDelete(ids, true)
-		viewModel.undoSnackbar.value = ids
-	}
-
-	private fun showUndoDeleteSnackbar(ids: List<Long>) {
-		val message = getString(R.string.removed_notes_message, ids.size)
-		val snackbar = Snackbar.make(findViewById(R.id.coordinatorLayout), message, Snackbar.LENGTH_LONG)
-		snackbar.setAction(R.string.undo) {
-			viewModel.softDelete(ids, false)
-		}
-		snackbar.addCallback(object: Snackbar.Callback(){
-			override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
-				Log.d("showUndoDeleteSnackbar", "onDismissed $event")
-				viewModel.undoSnackbar.value = null
-			}
-		})
-		snackbar.show()
 	}
 
 	private fun editNote(id:Long?, continueEditing: Boolean) {
